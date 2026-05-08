@@ -42,3 +42,6 @@ target_link_libraries(_C PRIVATE
 )
 
 set_target_properties(_C PROPERTIES OUTPUT_NAME "_C")
+
+# 安装生成的目标至 triton_anchor 目录
+install(TARGETS _C DESTINATION triton_anchor)
