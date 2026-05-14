@@ -24,8 +24,8 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionInterfaces.h" // IWYU pragma: keep
 #include "mlir/Pass/Pass.h"
-#include "triton-anchor/Dialect/Triton/Transforms/PassDetail.h" // IWYU pragma: keep
-#include "triton-anchor/Dialect/Triton/Transforms/Passes.h"
+#include "triton-linalg/Dialect/Triton/Transforms/PassDetail.h" // IWYU pragma: keep
+#include "triton-linalg/Dialect/Triton/Transforms/Passes.h"
 #include "triton/Dialect/Triton/IR/Dialect.h" // IWYU pragma: keep
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"

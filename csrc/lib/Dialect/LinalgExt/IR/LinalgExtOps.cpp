@@ -57,7 +57,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
-#include "triton-anchor/Dialect/LinalgExt/IR/LinalgExtOps.h"
+#include "triton-linalg/Dialect/LinalgExt/IR/LinalgExtOps.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -2948,13 +2948,13 @@ LogicalResult FlipOp::verify() {
 }
 
 /////// Operations corresponding to library calls defined with Tablegen ////////
-#include "triton-anchor/Dialect/LinalgExt/IR/LinalgExtNamedStructuredOps.yamlgen.cpp.inc"
+#include "triton-linalg/Dialect/LinalgExt/IR/LinalgExtNamedStructuredOps.yamlgen.cpp.inc"
 
 #define GET_OP_CLASSES
-#include "triton-anchor/Dialect/LinalgExt/IR/LinalgExtOps.cpp.inc"
+#include "triton-linalg/Dialect/LinalgExt/IR/LinalgExtOps.cpp.inc"
 
 #define GET_OP_CLASSES
-#include "triton-anchor/Dialect/LinalgExt/IR/LinalgExtStructedOps.cpp.inc"
+#include "triton-linalg/Dialect/LinalgExt/IR/LinalgExtStructedOps.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // LinalgDialect

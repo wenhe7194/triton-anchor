@@ -9,15 +9,15 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/PassRegistry.h"
 
-#include "triton-anchor/Conversion/ArithToLinalg/ArithToLinalg.h"
-#include "triton-anchor/Conversion/MathToLinalg/MathToLinalg.h"
-#include "triton-anchor/Conversion/TritonToLinalg/TritonToLinalg.h"
+#include "triton-linalg/Conversion/ArithToLinalg/ArithToLinalg.h"
+#include "triton-linalg/Conversion/MathToLinalg/MathToLinalg.h"
+#include "triton-linalg/Conversion/TritonToLinalg/TritonToLinalg.h"
 
 namespace mlir {
 class Pass;
 namespace triton {
 #define GEN_PASS_REGISTRATION
-#include "triton-anchor/Conversion/Passes.h.inc"
+#include "triton-linalg/Conversion/Passes.h.inc"
 
 } // namespace triton
 } // namespace mlir

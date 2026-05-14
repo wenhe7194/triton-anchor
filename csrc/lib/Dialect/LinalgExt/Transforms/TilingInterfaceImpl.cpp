@@ -34,8 +34,8 @@
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
-#include "triton-anchor/Dialect/LinalgExt/IR/LinalgExtOps.h"
-#include "triton-anchor/Dialect/LinalgExt/Transforms/TilingInterfaceImpl.h"
+#include "triton-linalg/Dialect/LinalgExt/IR/LinalgExtOps.h"
+#include "triton-linalg/Dialect/LinalgExt/Transforms/TilingInterfaceImpl.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -328,7 +328,7 @@ void mlir::triton::linalg_ext::registerTilingInterfaceExternalModels(
       +[](MLIRContext *ctx, triton::linalg_ext::LinalgExtDialect *dialect) {
         registerAll<
 #define GET_OP_LIST
-#include "triton-anchor/Dialect/LinalgExt/IR/LinalgExtStructedOps.cpp.inc"
+#include "triton-linalg/Dialect/LinalgExt/IR/LinalgExtStructedOps.cpp.inc"
             >(ctx);
       });
 }

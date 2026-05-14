@@ -10,8 +10,8 @@
 #include <optional>
 #include <variant>
 
-#include "triton-anchor/Dialect/Triton/Utils/MaskTracker.h"
-#include "triton-anchor/Utils/Utils.h"
+#include "triton-linalg/Dialect/Triton/Utils/MaskTracker.h"
+#include "triton-linalg/Utils/Utils.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/Builders.h"

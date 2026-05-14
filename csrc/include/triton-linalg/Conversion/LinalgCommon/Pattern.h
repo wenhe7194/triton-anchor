@@ -17,8 +17,8 @@
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "triton-anchor/Dialect/LinalgExt/IR/LinalgExtOps.h" // IWYU pragma: keep
-#include "triton-anchor/Dialect/Utils/ShapeUtils.h"
+#include "triton-linalg/Dialect/LinalgExt/IR/LinalgExtOps.h" // IWYU pragma: keep
+#include "triton-linalg/Dialect/Utils/ShapeUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 

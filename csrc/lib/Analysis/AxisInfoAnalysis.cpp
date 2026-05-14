@@ -8,8 +8,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "triton-anchor/Analysis/AxisInfoAnalysis.h"
-#include "triton-anchor/Dialect/Triton/Interfaces/InferAxisInfoInterface.h"
+#include "triton-linalg/Analysis/AxisInfoAnalysis.h"
+#include "triton-linalg/Dialect/Triton/Interfaces/InferAxisInfoInterface.h"
 
 #include <assert.h>
 #include <numeric>

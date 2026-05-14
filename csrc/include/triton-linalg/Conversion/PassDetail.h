@@ -68,7 +68,7 @@ class LinalgExtDialect;
 
 // IWYU pragma: end_keep
 #define GEN_PASS_CLASSES
-#include "triton-anchor/Conversion/Passes.h.inc"
+#include "triton-linalg/Conversion/Passes.h.inc"
 
 } // namespace triton
 } // namespace mlir

@@ -243,6 +243,6 @@ overrideAxisInfoByHint(Operation *op,
 } // namespace mlir
 
 /// Include the generated interface declarations.
-#include "triton-anchor/Dialect/Triton/Interfaces/InferAxisInfoInterface.h.inc" // IWYU pragma: export
+#include "triton-linalg/Dialect/Triton/Interfaces/InferAxisInfoInterface.h.inc" // IWYU pragma: export
 
 #endif // TRITON_LINALG_DIALECT_TRITON_INTERFACES_INFERAXISINFOINTERFACE_H

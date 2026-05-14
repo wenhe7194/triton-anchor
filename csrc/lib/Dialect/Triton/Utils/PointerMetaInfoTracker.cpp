@@ -4,7 +4,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "triton-anchor/Dialect/Triton/Utils/PointerMetaInfoTracker.h"
+#include "triton-linalg/Dialect/Triton/Utils/PointerMetaInfoTracker.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"

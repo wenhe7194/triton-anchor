@@ -4,7 +4,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "triton-anchor/Utils/Utils.h"
+#include "triton-linalg/Utils/Utils.h"
 
 #include <algorithm>
 #include <assert.h>

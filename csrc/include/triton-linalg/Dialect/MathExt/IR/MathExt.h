@@ -21,13 +21,13 @@
 // Math Extension Dialect
 //===----------------------------------------------------------------------===//
 
-#include "triton-anchor/Dialect/MathExt/IR/MathExtOpsDialect.h.inc"
+#include "triton-linalg/Dialect/MathExt/IR/MathExtOpsDialect.h.inc"
 
 //===----------------------------------------------------------------------===//
 // Math Extension Dialect Operations
 //===----------------------------------------------------------------------===//
 
 #define GET_OP_CLASSES
-#include "triton-anchor/Dialect/MathExt/IR/MathExtOps.h.inc"
+#include "triton-linalg/Dialect/MathExt/IR/MathExtOps.h.inc"
 
 #endif // TRITON_LINALG_DIALECT_MATHEXT_IR_MATHEXT_H

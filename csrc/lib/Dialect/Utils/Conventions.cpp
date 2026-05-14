@@ -9,7 +9,7 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
-#include "triton-anchor/Dialect/Utils/Conventions.h"
+#include "triton-linalg/Dialect/Utils/Conventions.h"
 #include "llvm/ADT/StringRef.h"
 
 using namespace mlir;

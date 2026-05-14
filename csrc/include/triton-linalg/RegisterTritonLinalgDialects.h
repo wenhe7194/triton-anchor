@@ -1,15 +1,15 @@
 #pragma once
 #include "mlir/InitAllPasses.h"
-#include "triton-anchor/Dialect/Auxiliary/IR/AuxiliaryDialect.h"
-#include "triton-anchor/Dialect/Auxiliary/Transforms/AuxOpTilingInterface.h"
-#include "triton-anchor/Dialect/LinalgExt/IR/LinalgExtOps.h"
-#include "triton-anchor/Dialect/LinalgExt/Transforms/TilingInterfaceImpl.h"
-#include "triton-anchor/Dialect/MathExt/IR/MathExt.h"
-#include "triton-anchor/Dialect/Triton/Transforms/InferAxisInfoInterfaceImpl.h"
+#include "triton-linalg/Dialect/Auxiliary/IR/AuxiliaryDialect.h"
+#include "triton-linalg/Dialect/Auxiliary/Transforms/AuxOpTilingInterface.h"
+#include "triton-linalg/Dialect/LinalgExt/IR/LinalgExtOps.h"
+#include "triton-linalg/Dialect/LinalgExt/Transforms/TilingInterfaceImpl.h"
+#include "triton-linalg/Dialect/MathExt/IR/MathExt.h"
+#include "triton-linalg/Dialect/Triton/Transforms/InferAxisInfoInterfaceImpl.h"
 #include "triton/Dialect/Triton/IR/Dialect.h"
 
-#include "triton-anchor/Conversion/Passes.h"
-#include "triton-anchor/Dialect/Triton/Transforms/Passes.h"
+#include "triton-linalg/Conversion/Passes.h"
+#include "triton-linalg/Dialect/Triton/Transforms/Passes.h"
 
 inline void registerTritonLinalgDialects(mlir::DialectRegistry &registry) {
   // Triton.

@@ -50,9 +50,9 @@
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
-#include "triton-anchor/Dialect/LinalgExt/IR/LinalgExtOps.h"
-#include "triton-anchor/Dialect/Triton/Transforms/Passes.h"
-#include "triton-anchor/Dialect/Utils/ShapeUtils.h"
+#include "triton-linalg/Dialect/LinalgExt/IR/LinalgExtOps.h"
+#include "triton-linalg/Dialect/Triton/Transforms/Passes.h"
+#include "triton-linalg/Dialect/Utils/ShapeUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
@@ -71,7 +71,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
-#include "triton-anchor/Dialect/Triton/Transforms/PassDetail.h"
+#include "triton-linalg/Dialect/Triton/Transforms/PassDetail.h"
 // IWYU pragma: end_keep
 
 using namespace mlir;
@@ -1038,12 +1038,10 @@ void ExtractAnalysis::visitOperand(Value operand, ExtractState &state,
 template <typename OpTy>
 LogicalResult ExtractAnalysis::rewriteExtractLikeOp(OpTy op,
                                                     PatternRewriter &rewriter) {
-  static_assert(
-      (std::is_same_v<OpTy, tensor::ExtractOp> ||
-       std::is_same_v<
-           OpTy,
-           tensor::ExtractSliceOp>)&&"Only tensor.extract and "
-                                     "tensor.extract_slice are supported yet.");
+  static_assert((std::is_same_v<OpTy, tensor::ExtractOp> ||
+                 std::is_same_v<OpTy, tensor::ExtractSliceOp>) &&
+                "Only tensor.extract and "
+                "tensor.extract_slice are supported yet.");
 
   // Only move rank-reduced tensor.extract_slice backward.
   if constexpr (std::is_same_v<OpTy, tensor::ExtractSliceOp>)

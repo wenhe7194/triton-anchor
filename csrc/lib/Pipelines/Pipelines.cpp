@@ -7,19 +7,17 @@
 // This file declares all pass pipelines
 //
 //===----------------------------------------------------------------------===//
-#include "triton-anchor/Pipelines/Pipelines.h"
+#include "triton-linalg/Pipelines/Pipelines.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Transforms/Passes.h"
-#include "triton-anchor/Conversion/Passes.h"
-#include "triton-anchor/Dialect/Triton/Transforms/Passes.h"
+#include "triton-linalg/Conversion/Passes.h"
+#include "triton-linalg/Dialect/Triton/Transforms/Passes.h"
 #include "llvm/ADT/StringRef.h"
 #include <functional>
 
 #include "mlir/Pass/Pass.h"
-
-
 
 using namespace mlir;
 using namespace triton;
@@ -27,8 +25,6 @@ using namespace triton;
 namespace {
 
 void buildTritonToLinalgPipeline(mlir::OpPassManager &pm) {
-
-
 
   pm.addPass(mlir::triton::createWrapFuncBodyWithSingleBlockPass());
   pm.addPass(mlir::createInlinerPass({}, nullptr));
@@ -49,8 +45,6 @@ void buildTritonToLinalgPipeline(mlir::OpPassManager &pm) {
   pm.addPass(mlir::createLoopInvariantCodeMotionPass());
   pm.addPass(mlir::triton::createWrapFuncBodyWithSingleBlockPass());
 
-
-  
   pm.addPass(mlir::createCSEPass());
   pm.addPass(mlir::createCanonicalizerPass());
 }

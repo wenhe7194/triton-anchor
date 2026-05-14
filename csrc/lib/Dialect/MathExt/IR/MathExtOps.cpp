@@ -8,7 +8,7 @@
 #include "mlir/Dialect/CommonFolders.h"
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/Builders.h"
-#include "triton-anchor/Dialect/MathExt/IR/MathExt.h"
+#include "triton-linalg/Dialect/MathExt/IR/MathExt.h"
 #include <optional>
 
 using namespace mlir;
@@ -19,7 +19,7 @@ using namespace mlir::math_ext;
 //===----------------------------------------------------------------------===//
 
 #define GET_OP_CLASSES
-#include "triton-anchor/Dialect/MathExt/IR/MathExtOps.cpp.inc"
+#include "triton-linalg/Dialect/MathExt/IR/MathExtOps.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // MulhiUIOp

@@ -11,7 +11,7 @@
 #ifndef TRITON_LINALG_ANALYSIS_AXISINFOANALYSIS_H
 #define TRITON_LINALG_ANALYSIS_AXISINFOANALYSIS_H
 
-#include "triton-anchor/Dialect/Triton/Interfaces/InferAxisInfoInterface.h"
+#include "triton-linalg/Dialect/Triton/Interfaces/InferAxisInfoInterface.h"
 
 #include "mlir/Analysis/DataFlow/SparseAnalysis.h"
 #include "mlir/IR/Value.h"

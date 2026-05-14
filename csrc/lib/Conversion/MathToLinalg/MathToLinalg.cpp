@@ -20,11 +20,11 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "triton-anchor/Conversion/LinalgCommon/Pattern.h"
-#include "triton-anchor/Conversion/MathToLinalg/MathToLinalg.h"
-#include "triton-anchor/Conversion/PassDetail.h"
-#include "triton-anchor/Dialect/LinalgExt/IR/LinalgExtOps.h" // IWYU pragma: keep
-#include "triton-anchor/Dialect/MathExt/IR/MathExt.h" // IWYU pragma: keep
+#include "triton-linalg/Conversion/LinalgCommon/Pattern.h"
+#include "triton-linalg/Conversion/MathToLinalg/MathToLinalg.h"
+#include "triton-linalg/Conversion/PassDetail.h"
+#include "triton-linalg/Dialect/LinalgExt/IR/LinalgExtOps.h" // IWYU pragma: keep
+#include "triton-linalg/Dialect/MathExt/IR/MathExt.h" // IWYU pragma: keep
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
 

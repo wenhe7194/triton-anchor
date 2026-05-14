@@ -4,7 +4,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "triton-anchor/Dialect/LinalgExt/IR/LinalgExtInterface.h"
+#include "triton-linalg/Dialect/LinalgExt/IR/LinalgExtInterface.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"   // IWYU pragma: keep
 #include "mlir/Dialect/Linalg/IR/Linalg.h" // IWYU pragma: keep
 #include "mlir/Dialect/Linalg/IR/LinalgInterfaces.h"
@@ -24,7 +24,7 @@ using namespace mlir::triton;
 namespace mlir {
 class OpBuilder;
 namespace triton {
-#include "triton-anchor/Dialect/LinalgExt/IR/LinalgExtInterface.cpp.inc" // IWYU pragma: export
+#include "triton-linalg/Dialect/LinalgExt/IR/LinalgExtInterface.cpp.inc" // IWYU pragma: export
 } // namespace triton
 } // namespace mlir
 LogicalResult triton::detail::verifyLinalgExtOpInterface(Operation *op) {

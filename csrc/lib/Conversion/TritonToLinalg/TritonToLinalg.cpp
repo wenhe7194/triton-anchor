@@ -54,25 +54,25 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "triton-anchor/Analysis/AxisInfoAnalysis.h"
-#include "triton-anchor/Conversion/ArithToLinalg/ArithToLinalg.h"
-#include "triton-anchor/Conversion/MathToLinalg/MathToLinalg.h"
-#include "triton-anchor/Conversion/PassDetail.h"
-#include "triton-anchor/Conversion/TritonToLinalg/AtomicCASConversion.h"
-#include "triton-anchor/Conversion/TritonToLinalg/AtomicRmwConversion.h"
-#include "triton-anchor/Conversion/TritonToLinalg/LoadStoreConversion.h"
-#include "triton-anchor/Conversion/TritonToLinalg/TritonToLinalg.h"
-#include "triton-anchor/Conversion/TritonToLinalg/TypeConverter.h"
-#include "triton-anchor/Conversion/TritonToLinalg/Utils.h"
-#include "triton-anchor/Dialect/Auxiliary/IR/AuxiliaryDialect.h"
-#include "triton-anchor/Dialect/LinalgExt/IR/LinalgExtOps.h"
-#include "triton-anchor/Dialect/LinalgExt/Utils/Utils.h"
-#include "triton-anchor/Dialect/MathExt/IR/MathExt.h" // IWYU pragma: keep
-#include "triton-anchor/Dialect/Triton/Utils/MaskTracker.h"
-#include "triton-anchor/Dialect/Utils/ArithUtils.h"
-#include "triton-anchor/Dialect/Utils/Conventions.h"
-#include "triton-anchor/Dialect/Utils/ShapeUtils.h"
-#include "triton-anchor/Utils/Utils.h"
+#include "triton-linalg/Analysis/AxisInfoAnalysis.h"
+#include "triton-linalg/Conversion/ArithToLinalg/ArithToLinalg.h"
+#include "triton-linalg/Conversion/MathToLinalg/MathToLinalg.h"
+#include "triton-linalg/Conversion/PassDetail.h"
+#include "triton-linalg/Conversion/TritonToLinalg/AtomicCASConversion.h"
+#include "triton-linalg/Conversion/TritonToLinalg/AtomicRmwConversion.h"
+#include "triton-linalg/Conversion/TritonToLinalg/LoadStoreConversion.h"
+#include "triton-linalg/Conversion/TritonToLinalg/TritonToLinalg.h"
+#include "triton-linalg/Conversion/TritonToLinalg/TypeConverter.h"
+#include "triton-linalg/Conversion/TritonToLinalg/Utils.h"
+#include "triton-linalg/Dialect/Auxiliary/IR/AuxiliaryDialect.h"
+#include "triton-linalg/Dialect/LinalgExt/IR/LinalgExtOps.h"
+#include "triton-linalg/Dialect/LinalgExt/Utils/Utils.h"
+#include "triton-linalg/Dialect/MathExt/IR/MathExt.h" // IWYU pragma: keep
+#include "triton-linalg/Dialect/Triton/Utils/MaskTracker.h"
+#include "triton-linalg/Dialect/Utils/ArithUtils.h"
+#include "triton-linalg/Dialect/Utils/Conventions.h"
+#include "triton-linalg/Dialect/Utils/ShapeUtils.h"
+#include "triton-linalg/Utils/Utils.h"
 #include "triton/Dialect/Triton/IR/Dialect.h"
 #include "triton/Dialect/Triton/IR/Types.h"
 #include "llvm/ADT/ADL.h"
@@ -646,16 +646,17 @@ struct TritonReducePattern : public OpConversionPattern<triton::ReduceOp> {
               triton::linalg_ext::findPayloadOp(&op.getCombineOp().front());
           if (!payloadOp)
             break;
-          
+
           // Special handling for maxnumf and minnumf
-          // TPU backend doesn't support NaN as neutral element, use infinity instead
+          // TPU backend doesn't support NaN as neutral element, use infinity
+          // instead
           auto resultType = payloadOp->getResult(0).getType();
           std::optional<TypedAttr> fillValAttr;
-          
+
           if (isa<arith::MaxNumFOp>(payloadOp)) {
             // For maxnumf, use negative infinity instead of NaN
             fillValAttr = arith::getIdentityValueAttr(
-                arith::AtomicRMWKind::maximumf, resultType, rewriter, loc, 
+                arith::AtomicRMWKind::maximumf, resultType, rewriter, loc,
                 /*useOnlyFiniteValue=*/false);
           } else if (isa<arith::MinNumFOp>(payloadOp)) {
             // For minnumf, use positive infinity instead of NaN
@@ -666,7 +667,7 @@ struct TritonReducePattern : public OpConversionPattern<triton::ReduceOp> {
             // For other operations, use the default neutral element
             fillValAttr = arith::getNeutralElement(payloadOp);
           }
-          
+
           // When the requirements are not met, go to the later general
           // implementation.
           if (!fillValAttr.has_value())

@@ -36,7 +36,7 @@ std::unique_ptr<Pass> createWrapFuncBodyWithSingleBlockPass();
 
 // Include the code for registering passes.
 #define GEN_PASS_REGISTRATION
-#include "triton-anchor/Dialect/Triton/Transforms/Passes.h.inc"
+#include "triton-linalg/Dialect/Triton/Transforms/Passes.h.inc"
 
 } // namespace triton
 } // namespace mlir

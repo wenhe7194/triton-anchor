@@ -36,6 +36,6 @@ LogicalResult verifyLinalgExtOpInterface(Operation *op);
 } // namespace mlir
 
 /// Include the generated interface declarations.
-#include "triton-anchor/Dialect/LinalgExt/IR/LinalgExtInterface.h.inc" // IWYU pragma: export
+#include "triton-linalg/Dialect/LinalgExt/IR/LinalgExtInterface.h.inc" // IWYU pragma: export
 
 #endif // TRITON_LINALG_DIALECT_LINALGEXT_IR_LINALGEXTINTERFACE_H

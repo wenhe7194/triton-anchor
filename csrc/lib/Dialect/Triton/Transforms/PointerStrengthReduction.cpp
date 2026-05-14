@@ -33,9 +33,9 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "triton-anchor/Dialect/Triton/Transforms/PassDetail.h" // IWYU pragma: keep
-#include "triton-anchor/Dialect/Triton/Transforms/Passes.h"
-#include "triton-anchor/Dialect/Triton/Utils/PointerInfo.h"
+#include "triton-linalg/Dialect/Triton/Transforms/PassDetail.h" // IWYU pragma: keep
+#include "triton-linalg/Dialect/Triton/Transforms/Passes.h"
+#include "triton-linalg/Dialect/Triton/Utils/PointerInfo.h"
 #include "triton/Dialect/Triton/IR/Dialect.h"
 #include "triton/Dialect/Triton/IR/Types.h"
 #include "llvm/ADT/ArrayRef.h"

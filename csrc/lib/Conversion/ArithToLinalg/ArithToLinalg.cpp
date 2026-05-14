@@ -28,12 +28,12 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "triton-anchor/Conversion/ArithToLinalg/ArithToLinalg.h"
-#include "triton-anchor/Conversion/LinalgCommon/Pattern.h"
-#include "triton-anchor/Conversion/PassDetail.h"
-#include "triton-anchor/Dialect/LinalgExt/IR/LinalgExtOps.h" // IWYU pragma: keep
-#include "triton-anchor/Dialect/Utils/ArithUtils.h"
-#include "triton-anchor/Dialect/Utils/ShapeUtils.h"
+#include "triton-linalg/Conversion/ArithToLinalg/ArithToLinalg.h"
+#include "triton-linalg/Conversion/LinalgCommon/Pattern.h"
+#include "triton-linalg/Conversion/PassDetail.h"
+#include "triton-linalg/Dialect/LinalgExt/IR/LinalgExtOps.h" // IWYU pragma: keep
+#include "triton-linalg/Dialect/Utils/ArithUtils.h"
+#include "triton-linalg/Dialect/Utils/ShapeUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"

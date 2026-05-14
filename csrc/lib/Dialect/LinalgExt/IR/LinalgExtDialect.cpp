@@ -21,7 +21,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Support/LogicalResult.h"
-#include "triton-anchor/Dialect/LinalgExt/IR/LinalgExtOps.h"
+#include "triton-linalg/Dialect/LinalgExt/IR/LinalgExtOps.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -111,23 +111,23 @@ void addNamedOpBuilders(
 void mlir::triton::linalg_ext::LinalgExtDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
-#include "triton-anchor/Dialect/LinalgExt/IR/LinalgExtOps.cpp.inc"
+#include "triton-linalg/Dialect/LinalgExt/IR/LinalgExtOps.cpp.inc"
       >();
 
   addOperations<
 #define GET_OP_LIST
-#include "triton-anchor/Dialect/LinalgExt/IR/LinalgExtStructedOps.cpp.inc"
+#include "triton-linalg/Dialect/LinalgExt/IR/LinalgExtStructedOps.cpp.inc"
       >();
 
   // Fill the Linalg-specific OpName to RegionBuilder map.
   addNamedOpBuilders<
 #define GET_OP_LIST
-#include "triton-anchor/Dialect/LinalgExt/IR/LinalgExtOps.cpp.inc"
+#include "triton-linalg/Dialect/LinalgExt/IR/LinalgExtOps.cpp.inc"
       >(namedStructuredOpRegionBuilders);
 
   addNamedOpBuilders<
 #define GET_OP_LIST
-#include "triton-anchor/Dialect/LinalgExt/IR/LinalgExtStructedOps.cpp.inc"
+#include "triton-linalg/Dialect/LinalgExt/IR/LinalgExtStructedOps.cpp.inc"
       >(namedStructuredOpRegionBuilders);
 
   addInterfaces<LinalgExtInlinerInterface>();
@@ -141,5 +141,5 @@ LogicalResult LinalgExtDialect::verifyOperationAttribute(Operation *op,
                          << "' not supported by the linalg dialect";
 }
 
-#include "triton-anchor/Dialect/LinalgExt/IR/LinalgExtEnums.cpp.inc"
-#include "triton-anchor/Dialect/LinalgExt/IR/LinalgExtOpsDialect.cpp.inc"
+#include "triton-linalg/Dialect/LinalgExt/IR/LinalgExtEnums.cpp.inc"
+#include "triton-linalg/Dialect/LinalgExt/IR/LinalgExtOpsDialect.cpp.inc"

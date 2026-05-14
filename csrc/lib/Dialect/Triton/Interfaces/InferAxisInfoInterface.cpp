@@ -8,7 +8,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "triton-anchor/Dialect/Triton/Interfaces/InferAxisInfoInterface.h"
+#include "triton-linalg/Dialect/Triton/Interfaces/InferAxisInfoInterface.h"
 
 #include <numeric>
 #include <string>
@@ -34,7 +34,7 @@
 
 #include "triton/Dialect/Triton/IR/Types.h"
 
-#include "triton-anchor/Dialect/Triton/Interfaces/InferAxisInfoInterface.cpp.inc"
+#include "triton-linalg/Dialect/Triton/Interfaces/InferAxisInfoInterface.cpp.inc"
 
 using namespace mlir;
 using namespace mlir::triton;

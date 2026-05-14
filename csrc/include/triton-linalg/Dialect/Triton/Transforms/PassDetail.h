@@ -9,7 +9,7 @@
 // For .inc.files.
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
-#include "triton-anchor/Dialect/Triton/Transforms/Passes.h"
+#include "triton-linalg/Dialect/Triton/Transforms/Passes.h"
 
 namespace mlir {
 class DialectRegistry;
@@ -51,7 +51,7 @@ class AuxiliaryDialect;
 
 namespace triton {
 #define GEN_PASS_CLASSES
-#include "triton-anchor/Dialect/Triton/Transforms/Passes.h.inc"
+#include "triton-linalg/Dialect/Triton/Transforms/Passes.h.inc"
 } // namespace triton
 } // namespace mlir
 

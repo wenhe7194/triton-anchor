@@ -3,7 +3,7 @@
 // Copyright (C) [2022-2025] by Cambricon.
 //
 //===----------------------------------------------------------------------===//
-#include "triton-anchor/Dialect/Utils/ArithUtils.h"
+#include "triton-linalg/Dialect/Utils/ArithUtils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
