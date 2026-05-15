@@ -133,8 +133,8 @@ class CMakeBuild(build_ext):
             cwd=cmake_dir,
         )
 
-        # 收集所有的头文件 (.h 和 .inc) 到 python/triton/include 目录，以便打包到 wheel 中
-        include_out_dir = os.path.join(get_base_dir(), "python", "triton", "include")
+        # 收集所有的头文件 (.h 和 .inc) 到 upstream/python/triton/include 目录，以便打包到 wheel 中
+        include_out_dir = os.path.join(get_base_dir(), "upstream", "python", "triton", "include")
         os.makedirs(include_out_dir, exist_ok=True)
 
         src_include_dirs = [
@@ -167,21 +167,21 @@ def get_packages():
     packages = [
         # 上游 Triton 前端
         "triton",
-        "triton/_C",
-        "triton/compiler",
-        "triton/language",
-        "triton/language/extra",
-        "triton/language/extra/cuda",
-        "triton/language/extra/hip",
-        "triton/runtime",
-        "triton/backends",
-        "triton/tools",
+        "triton._C",
+        "triton.compiler",
+        "triton.language",
+        "triton.language.extra",
+        "triton.language.extra.cuda",
+        "triton.language.extra.hip",
+        "triton.runtime",
+        "triton.backends",
+        "triton.tools",
         # triton-anchor 编译框架
         "triton_anchor",
-        "triton_anchor/adapters",
-        "triton_anchor/extensions",
-        "triton_anchor/language",
-        "triton_anchor/tests",
+        "triton_anchor.adapters",
+        "triton_anchor.extensions",
+        "triton_anchor.language",
+        "triton_anchor.tests",
     ]
     return packages
 
@@ -192,11 +192,14 @@ setup(
     author="Triton Anchor Contributors",
     description="Unified Triton Compilation Frontend for custom AI accelerators",
     long_description="",
-    package_dir={"": "python"},
+    package_dir={
+        "": "python",
+        "triton": "upstream/python/triton",
+    },
     packages=get_packages(),
     install_requires=["filelock"],
     package_data={
-        "triton/tools": ["compile.h", "compile.c"],
+        "triton.tools": ["compile.h", "compile.c"],
         "triton": [
             "include/**/*.h", "include/**/*.inc", "include/**/*.def",
             "include/**/**/*.h", "include/**/**/*.inc", "include/**/**/*.def",
@@ -204,7 +207,7 @@ setup(
         ],
     },
     include_package_data=True,
-    ext_modules=[CMakeExtension("triton", "python/triton/_C/")],
+    ext_modules=[CMakeExtension("triton", "upstream/python/triton/_C/")],
     cmdclass={
         "build_ext": CMakeBuild,
         "build_py": CMakeBuildPy,
