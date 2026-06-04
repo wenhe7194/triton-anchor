@@ -133,11 +133,20 @@ add_subdirectory(csrc)
 set(TRITON_ANCHOR_EXPORTED_TARGETS
     TritonIR
 
-    # triton-shared: TTIR → Core Dialects 通用转换（tsingmicro 后端需要）
-    TritonArithToLinalg
-    StructuredToMemref
-    ConvertTritonPtr
-    ReconcilePtrCasts
+    # triton-shared Dialect（来自 flir）
+    TritonStructuredIR
+    TritonTilingExtIR
+
+    # triton-shared Conversion passes（flir 原生，硬件无关）
+    TritonToLinalg
+    TritonToStructured
+    TritonToUnstructured
+    UnstructuredToMemref
+    TritonPtrToMemref
+
+    # triton-shared Analysis
+    TritonSharedAnalysis
+    TritonSharedAnalysisStructured
 )
 foreach(target ${TRITON_ANCHOR_EXPORTED_TARGETS})
     if(TARGET ${target})
@@ -205,11 +214,21 @@ if(TRITON_BUILD_PYTHON_MODULE)
     MLIRTensorDialect
     MLIRAffineDialect
 
-    # triton-shared: TTIR → Core Dialects 通用转换
-    TritonArithToLinalg
-    StructuredToMemref
-    ConvertTritonPtr
-    ReconcilePtrCasts
+    # triton-shared Dialect（来自 flir）
+    TritonStructuredIR
+    TritonTilingExtIR
+
+    # triton-shared Conversion passes（flir 原生，硬件无关）
+    TritonToLinalg
+    TritonToStructured
+    TritonToUnstructured
+    UnstructuredToMemref
+    TritonPtrToMemref
+
+    # triton-shared Analysis + Utils
+    TritonSharedAnalysis
+    TritonSharedAnalysisStructured
+    TritonSharedUtils
 
     # LLVM
     LLVMPasses
