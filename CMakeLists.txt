@@ -178,6 +178,8 @@ if(TRITON_BUILD_PYTHON_MODULE)
     ${PYTHON_SRC_PATH}/passes.cc
     ${PYTHON_SRC_PATH}/interpreter.cc
     ${PYTHON_SRC_PATH}/llvm.cc
+    # triton-anchor 扩展绑定（注册 triton-shared 方言和 Pass）
+    ${CMAKE_CURRENT_SOURCE_DIR}/csrc/bindings/triton_anchor_ext.cc
   )
 
   set(TRITON_LIBRARIES

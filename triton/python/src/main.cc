@@ -43,6 +43,8 @@ void init_triton_llvm(pybind11::module &&m);
 void init_triton_interpreter(pybind11::module &&m);
 void init_triton_passes(pybind11::module &&m);
 void init_triton_stacktrace_hook(pybind11::module &m);
+// triton-anchor 扩展模块（注册 triton-shared 方言和通用 Pass）
+void init_triton_anchor(pybind11::module &&m);
 FOR_EACH_P(DECLARE_BACKEND, TRITON_BACKENDS_TUPLE)
 
 PYBIND11_MODULE(libtriton, m) {
@@ -53,5 +55,7 @@ PYBIND11_MODULE(libtriton, m) {
   init_triton_passes(m.def_submodule("passes"));
   init_triton_interpreter(m.def_submodule("interpreter"));
   init_triton_llvm(m.def_submodule("llvm"));
+  // 注册 triton-anchor 扩展（triton-shared 方言 + 通用 Pass）
+  init_triton_anchor(m.def_submodule("anchor"));
   FOR_EACH_P(INIT_BACKEND, TRITON_BACKENDS_TUPLE)
 }
