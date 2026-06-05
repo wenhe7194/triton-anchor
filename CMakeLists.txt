@@ -28,11 +28,33 @@ include(TableGen)
 include(AddLLVM)
 include(AddMLIR)
 
-# Pybind11: 通过 Python3 的 site-packages 路径自动发现 pip 安装的 pybind11
+# ═══════════════════════════════════════════════════════════════════════
+# pybind11：先通过 Python 询问安装路径，再 fallback 到 HINTS 搜索
+# 覆盖场景：pip install pybind11 / conda install pybind11 / 系统包
+# ═══════════════════════════════════════════════════════════════════════
 find_package(Python3 REQUIRED COMPONENTS Development Interpreter)
-find_package(pybind11 CONFIG REQUIRED HINTS "${Python3_SITELIB}")
 
-# 全局添加 Python 和 pybind11 的 include 路径（与 sophgo 保持一致）
+# 优先通过 pybind11.get_cmake_dir() 获取精确的 cmake 配置路径
+execute_process(
+    COMMAND ${Python3_EXECUTABLE} -c "import pybind11; print(pybind11.get_cmake_dir())"
+    OUTPUT_VARIABLE PYBIND11_CMAKE_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    RESULT_VARIABLE PYBIND11_PYTHON_RESULT
+)
+if(PYBIND11_PYTHON_RESULT EQUAL 0 AND PYBIND11_CMAKE_DIR)
+    message(STATUS "Found pybind11 via Python at: ${PYBIND11_CMAKE_DIR}")
+    list(APPEND CMAKE_PREFIX_PATH "${PYBIND11_CMAKE_DIR}")
+endif()
+
+# 如果外部传入了 pybind11_DIR，优先使用（setup.py 通过 PYBIND11_SYSPATH 传入时会设置）
+find_package(pybind11 CONFIG REQUIRED
+    HINTS
+        "${PYBIND11_CMAKE_DIR}"
+        "${Python3_SITELIB}"
+        "${Python3_SITELIB}/pybind11/share/cmake/pybind11"
+)
+
+# 全局添加 Python 和 pybind11 的 include 路径
 include_directories(${Python3_INCLUDE_DIRS})
 include_directories(${pybind11_INCLUDE_DIR})
 
