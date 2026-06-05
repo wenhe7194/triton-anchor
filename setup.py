@@ -145,7 +145,9 @@ class CMakeBuild(build_ext):
             if not os.path.exists(src_dir): return
             for root, _, files in os.walk(src_dir):
                 for f in files:
-                    if f.endswith(".h") or f.endswith(".inc") or f.endswith(".def"):
+                    # .td 文件是 TableGen 源文件，下游后端的 mlir-tblgen 需要通过
+                    # include 路径访问它们（例如 triton/Dialect/Triton/IR/TritonAttrDefs.td）
+                    if f.endswith(".h") or f.endswith(".inc") or f.endswith(".def") or f.endswith(".td"):
                         src_path = os.path.join(root, f)
                         rel_path = os.path.relpath(src_path, src_dir)
                         dst_path = os.path.join(out_dir, rel_path)
@@ -201,14 +203,14 @@ setup(
     package_data={
         "triton.tools": ["compile.h", "compile.c"],
         "triton": [
-            "include/**/*.h", "include/**/*.inc", "include/**/*.def",
-            "include/**/**/*.h", "include/**/**/*.inc", "include/**/**/*.def",
-            "include/**/**/**/*.h", "include/**/**/**/*.inc", "include/**/**/**/*.def",
+            "include/**/*.h", "include/**/*.inc", "include/**/*.def", "include/**/*.td",
+            "include/**/**/*.h", "include/**/**/*.inc", "include/**/**/*.def", "include/**/**/*.td",
+            "include/**/**/**/*.h", "include/**/**/**/*.inc", "include/**/**/**/*.def", "include/**/**/**/*.td",
         ],
         "triton_anchor": [
-            "include/**/*.h", "include/**/*.inc", "include/**/*.def",
-            "include/**/**/*.h", "include/**/**/*.inc", "include/**/**/*.def",
-            "include/**/**/**/*.h", "include/**/**/**/*.inc", "include/**/**/**/*.def",
+            "include/**/*.h", "include/**/*.inc", "include/**/*.def", "include/**/*.td",
+            "include/**/**/*.h", "include/**/**/*.inc", "include/**/**/*.def", "include/**/**/*.td",
+            "include/**/**/**/*.h", "include/**/**/**/*.inc", "include/**/**/**/*.def", "include/**/**/**/*.td",
         ],
     },
     include_package_data=True,
