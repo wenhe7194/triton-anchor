@@ -14,6 +14,7 @@ add_triton_library(TritonToLinalg
   MLIRMathExtOpsIncGen
 
   LINK_LIBS PUBLIC
+  MLIRMathExtDialect
   TritonTilingExtIR
   MLIRArithDialect
   MLIRDialectUtils
