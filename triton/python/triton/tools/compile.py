@@ -13,13 +13,14 @@ import triton.backends
 
 @dataclass
 class CompileArgs:
-    '''
+    """
     A class to contain arguments from command-line parser.
-    '''
-    path: str = ''
-    kernel_name: str = ''
-    signature: str = ''
-    grid: str = ''
+    """
+
+    path: str = ""
+    kernel_name: str = ""
+    signature: str = ""
+    grid: str = ""
     target: str | None = None
     num_warps: int = 1
     num_stages: int = 3
@@ -57,23 +58,60 @@ used to run this `compile.py` script
 def main():
     # command-line arguments
     parser = ArgumentParser(description=desc)
-    parser.add_argument("path",
-                        help="Path to Python source containing desired kernel in its scope. File will be executed.")
-    parser.add_argument("--kernel-name", "-n", type=str, default="", help="Name of the kernel to compile",
-                        required=True)
     parser.add_argument(
-        "--target", "-t", type=str, default=None,
+        "path",
+        help="Path to Python source containing desired kernel in its scope. File will be executed.",
+    )
+    parser.add_argument(
+        "--kernel-name",
+        "-n",
+        type=str,
+        default="",
+        help="Name of the kernel to compile",
+        required=True,
+    )
+    parser.add_argument(
+        "--target",
+        "-t",
+        type=str,
+        default=None,
         help="The target to compile towards, in format of '<backend>:<arch>:<warp-size>'; "
-        "e.g., 'cuda:80:32', 'hip:gfx942:64'. Default to None, which means using current machine's GPU target")
-    parser.add_argument("--num-warps", "-w", type=int, default=1, help="Number of warps to launch the kernel")
-    parser.add_argument("--num-stages", "-ns", type=int, default=3,
-                        help="Number of stages (meta-parameter of the kernel)")
-    parser.add_argument("--out-name", "-on", type=str, default=None, help="Out name for the compiled kernel")
-    parser.add_argument("--out-path", "-o", type=Path, default=None, help="Out filename")
-    parser.add_argument("--signature", "-s", type=str, help="Signature of the kernel", required=True)
-    parser.add_argument("--grid", "-g", type=str, help="Launch grid of the kernel", required=True)
+        "e.g., 'cuda:80:32', 'hip:gfx942:64'. Default to None, which means using current machine's GPU target",
+    )
+    parser.add_argument(
+        "--num-warps",
+        "-w",
+        type=int,
+        default=1,
+        help="Number of warps to launch the kernel",
+    )
+    parser.add_argument(
+        "--num-stages",
+        "-ns",
+        type=int,
+        default=3,
+        help="Number of stages (meta-parameter of the kernel)",
+    )
+    parser.add_argument(
+        "--out-name",
+        "-on",
+        type=str,
+        default=None,
+        help="Out name for the compiled kernel",
+    )
+    parser.add_argument(
+        "--out-path", "-o", type=Path, default=None, help="Out filename"
+    )
+    parser.add_argument(
+        "--signature", "-s", type=str, help="Signature of the kernel", required=True
+    )
+    parser.add_argument(
+        "--grid", "-g", type=str, help="Launch grid of the kernel", required=True
+    )
     cli_args = parser.parse_args()
-    args = CompileArgs(**vars(cli_args))  # A sanity check to ensure class CompileArgs is updated as well.
+    args = CompileArgs(
+        **vars(cli_args)
+    )  # A sanity check to ensure class CompileArgs is updated as well.
     compile_kernel(args)
 
 
@@ -115,7 +153,9 @@ def compile_kernel(args: CompileArgs):
             pass
         return None
 
-    hints = {(i, ): constexpr(s.split(":")[1]) for i, s in enumerate(signature) if ":" in s}
+    hints = {
+        (i,): constexpr(s.split(":")[1]) for i, s in enumerate(signature) if ":" in s
+    }
     hints = {k: v for k, v in hints.items() if v is not None}
     constants = {kernel.arg_names[i]: constexpr(s) for i, s in enumerate(signature)}
     constants = {k: v for k, v in constants.items() if v is not None}
@@ -124,8 +164,8 @@ def compile_kernel(args: CompileArgs):
             constants[kernel.arg_names[key[0]]] = value
     signature = {kernel.arg_names[i]: s.split(":")[0] for i, s in enumerate(signature)}
     for key in constants:
-        signature[key] = 'constexpr'
-    const_sig = 'x'.join([str(v) for v in constants.values()])
+        signature[key] = "constexpr"
+    const_sig = "x".join([str(v) for v in constants.values()])
     doc_string = [f"{k}={v}" for k, v in constants.items()]
     doc_string += [f"num_warps={args.num_warps}", f"num_stages={args.num_stages}"]
     # compile ast into cubin
@@ -133,18 +173,27 @@ def compile_kernel(args: CompileArgs):
         assert h in [1, 16], f"Only 1 and 16 are valid hints, got {h}"
     attrs = {k: [["tt.divisibility", 16]] for k, v in hints.items() if v == 16}
     kernel.create_binder()
-    src = kernel.ASTSource(fn=kernel, constexprs=constants, signature=signature, attrs=attrs)
-    target = triton.backends.compiler.GPUTarget(*args.target.split(":")) \
-        if args.target else triton.runtime.driver.active.get_current_target()
+    src = kernel.ASTSource(
+        fn=kernel, constexprs=constants, signature=signature, attrs=attrs
+    )
+    target = (
+        triton.backends.compiler.GPUTarget(*args.target.split(":"))
+        if args.target
+        else triton.runtime.driver.active.get_current_target()
+    )
     backend = triton.compiler.make_backend(target)
     kwargs = {"num_warps": args.num_warps, "num_stages": args.num_stages}
     options = backend.parse_options(kwargs)
     ccinfo = triton.compile(src, target=target, options=options.__dict__)
 
     if getattr(ccinfo.metadata, "global_scratch_size", 0) > 0:
-        raise RuntimeError("AOT compiling kernels with global scratch requirements is not yet implemented")
+        raise RuntimeError(
+            "AOT compiling kernels with global scratch requirements is not yet implemented"
+        )
     if ccinfo.metadata.profile_scratch_size > 0:
-        raise RuntimeError("AOT compiling kernels with profile scratch requirements is not yet implemented")
+        raise RuntimeError(
+            "AOT compiling kernels with profile scratch requirements is not yet implemented"
+        )
 
     arg_names = []
     arg_types = []
@@ -156,18 +205,18 @@ def compile_kernel(args: CompileArgs):
             arg_types.append(signature[arg_name])
             arg_names_not_1.append(arg_name)
             arg_types_not_1.append(signature[arg_name])
-        elif hints.get((i, ), None) == 1:
+        elif hints.get((i,), None) == 1:
             arg_names.append(arg_name)
             arg_types.append("i32")
 
     # dump C stub code
-    suffix = ''
+    suffix = ""
     for i, ty in enumerate(signature.values()):
-        if hints.get((i, ), None) == 1:
-            suffix += f'{i}c'
-        if hints.get((i, ), None) == 16:
-            suffix += f'{i}d'
-    func_name = '_'.join([out_name, sig_hash, suffix])
+        if hints.get((i,), None) == 1:
+            suffix += f"{i}c"
+        if hints.get((i,), None) == 16:
+            suffix += f"{i}d"
+    func_name = "_".join([out_name, sig_hash, suffix])
     asm = ccinfo.asm[backend.binary_ext]  # store binary data once
 
     hex_ = str(binascii.hexlify(asm))[2:-1]
@@ -179,9 +228,20 @@ def compile_kernel(args: CompileArgs):
         "triton_kernel_name": args.kernel_name,
         "bin_size": len(asm),
         "bin_data": ", ".join([f"0x{x}{y}" for x, y in zip(hex_[::2], hex_[1::2])]),
-        "signature": ", ".join([f"{ty_to_cpp(ty)} {name}" for name, ty in zip(arg_names_not_1, arg_types_not_1)]),
-        "full_signature": ", ".join([f"{ty_to_cpp(ty)} {name}" for name, ty in zip(arg_names, arg_types)]),
-        "arg_pointers": ", ".join([f"&{arg}" for arg in arg_names_not_1] + ["&global_scratch"] + ["&profile_scratch"]),
+        "signature": ", ".join(
+            [
+                f"{ty_to_cpp(ty)} {name}"
+                for name, ty in zip(arg_names_not_1, arg_types_not_1)
+            ]
+        ),
+        "full_signature": ", ".join(
+            [f"{ty_to_cpp(ty)} {name}" for name, ty in zip(arg_names, arg_types)]
+        ),
+        "arg_pointers": ", ".join(
+            [f"&{arg}" for arg in arg_names_not_1]
+            + ["&global_scratch"]
+            + ["&profile_scratch"]
+        ),
         "num_args": len(arg_names_not_1) + 2,  # +2 for global and profile scratch
         "kernel_docstring": doc_string,
         "shared": ccinfo.metadata.shared,
@@ -196,7 +256,7 @@ def compile_kernel(args: CompileArgs):
     output_files = []
     backend_name = target.backend
     template_dir = Path(__file__).parent / "extra" / backend_name
-    for template_path in template_dir.glob('compile.*'):
+    for template_path in template_dir.glob("compile.*"):
         ext = template_path.suffix
         output_file = out_path.with_suffix(f".{sig_hash}_{suffix}{ext}")
         with output_file.open("w") as fp:

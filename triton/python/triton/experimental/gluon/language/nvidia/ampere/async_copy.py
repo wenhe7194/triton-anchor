@@ -11,8 +11,15 @@ __all__ = [
 
 
 @builtin
-def async_copy_global_to_shared(smem, pointer, mask=None, cache_modifier="", eviction_policy="", volatile=False,
-                                _semantic=None):
+def async_copy_global_to_shared(
+    smem,
+    pointer,
+    mask=None,
+    cache_modifier="",
+    eviction_policy="",
+    volatile=False,
+    _semantic=None,
+):
     """
     Asynchronously copy elements from global memory to shared memory.
 
@@ -31,12 +38,21 @@ def async_copy_global_to_shared(smem, pointer, mask=None, cache_modifier="", evi
     if mask is not None:
         pointer, mask = _semantic.broadcast_impl_value(pointer, mask)
     _check(
-        smem.shape == pointer.shape, lambda:
-        f"expected smem shape to match pointer shape but got smem.shape = {smem.shape}, pointer.shape = {pointer.shape}"
+        smem.shape == pointer.shape,
+        lambda: (
+            f"expected smem shape to match pointer shape but got smem.shape = {smem.shape}, pointer.shape = {pointer.shape}"
+        ),
     )
     mask_handle = mask.handle if mask is not None else ir.value()
-    _semantic.builder.create_async_copy_global_to_local(smem.handle, pointer.handle, mask_handle, ir.value(),
-                                                        cache_modifier, eviction_policy, volatile)
+    _semantic.builder.create_async_copy_global_to_local(
+        smem.handle,
+        pointer.handle,
+        mask_handle,
+        ir.value(),
+        cache_modifier,
+        eviction_policy,
+        volatile,
+    )
 
 
 @builtin
@@ -49,7 +65,9 @@ def mbarrier_arrive(mbarrier, increment_count=True, _semantic=None):
         increment_count (bool): Whether to increment the arrival count. Defaults to True.
     """
     increment_count = _unwrap_if_constexpr(increment_count)
-    _semantic.builder.create_async_copy_mbarrier_arrive(mbarrier.handle, increment_count)
+    _semantic.builder.create_async_copy_mbarrier_arrive(
+        mbarrier.handle, increment_count
+    )
 
 
 @builtin

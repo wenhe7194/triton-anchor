@@ -3,13 +3,13 @@ from typing import Callable, List, Protocol, Sequence
 
 
 class Benchmarker(Protocol):
-
-    def __call__(self, kernel_call: Callable, *, quantiles: List[float], **kwargs) -> Sequence[float]:
+    def __call__(
+        self, kernel_call: Callable, *, quantiles: List[float], **kwargs
+    ) -> Sequence[float]:
         pass
 
 
 class DriverBase(metaclass=ABCMeta):
-
     @classmethod
     @abstractmethod
     def is_active(self):
@@ -48,16 +48,19 @@ class DriverBase(metaclass=ABCMeta):
 
 
 class GPUDriver(DriverBase):
-
     def __init__(self):
         # TODO: support other frameworks than torch
         import torch
+
         self.get_device_capability = torch.cuda.get_device_capability
         try:
             from torch._C import _cuda_getCurrentRawStream
+
             self.get_current_stream = _cuda_getCurrentRawStream
         except ImportError:
-            self.get_current_stream = lambda idx: torch.cuda.current_stream(idx).cuda_stream
+            self.get_current_stream = lambda idx: (
+                torch.cuda.current_stream(idx).cuda_stream
+            )
         self.get_current_device = torch.cuda.current_device
         self.set_current_device = torch.cuda.set_device
 

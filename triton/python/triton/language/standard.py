@@ -116,7 +116,6 @@ def swizzle2d(i, j, size_i, size_j, size_g):
     return new_i, new_j
 
 
-
 @jit
 def zeros(shape, dtype):
     """
@@ -173,15 +172,28 @@ def _elementwise_max(a, b):
 
 @core._tensor_member_fn
 @jit
-@core._add_reduction_docstr("maximum", return_indices_arg="return_indices",
-                            tie_break_arg="return_indices_tie_break_left")
-def max(input, axis=None, return_indices=False, return_indices_tie_break_left=True, keep_dims=False):
+@core._add_reduction_docstr(
+    "maximum",
+    return_indices_arg="return_indices",
+    tie_break_arg="return_indices_tie_break_left",
+)
+def max(
+    input,
+    axis=None,
+    return_indices=False,
+    return_indices_tie_break_left=True,
+    keep_dims=False,
+):
     input = core._promote_bfloat16_to_float32(input)
     if return_indices:
         if return_indices_tie_break_left:
-            return core._reduce_with_indices(input, axis, _argmax_combine_tie_break_left, keep_dims=keep_dims)
+            return core._reduce_with_indices(
+                input, axis, _argmax_combine_tie_break_left, keep_dims=keep_dims
+            )
         else:
-            return core._reduce_with_indices(input, axis, _argmax_combine_tie_break_fast, keep_dims=keep_dims)
+            return core._reduce_with_indices(
+                input, axis, _argmax_combine_tie_break_fast, keep_dims=keep_dims
+            )
     else:
         if core.constexpr(input.dtype.primitive_bitwidth) < core.constexpr(32):
             if core.constexpr(input.dtype.is_floating()):
@@ -197,7 +209,13 @@ def max(input, axis=None, return_indices=False, return_indices_tie_break_left=Tr
 @jit
 @core._add_reduction_docstr("maximum index", tie_break_arg="tie_break_left")
 def argmax(input, axis, tie_break_left=True, keep_dims=False):
-    (_, ret) = max(input, axis, return_indices=True, return_indices_tie_break_left=tie_break_left, keep_dims=keep_dims)
+    (_, ret) = max(
+        input,
+        axis,
+        return_indices=True,
+        return_indices_tie_break_left=tie_break_left,
+        keep_dims=keep_dims,
+    )
     return ret
 
 
@@ -233,15 +251,28 @@ def _elementwise_min(a, b):
 
 @core._tensor_member_fn
 @jit
-@core._add_reduction_docstr("minimum", return_indices_arg="return_indices",
-                            tie_break_arg="return_indices_tie_break_left")
-def min(input, axis=None, return_indices=False, return_indices_tie_break_left=True, keep_dims=False):
+@core._add_reduction_docstr(
+    "minimum",
+    return_indices_arg="return_indices",
+    tie_break_arg="return_indices_tie_break_left",
+)
+def min(
+    input,
+    axis=None,
+    return_indices=False,
+    return_indices_tie_break_left=True,
+    keep_dims=False,
+):
     input = core._promote_bfloat16_to_float32(input)
     if return_indices:
         if return_indices_tie_break_left:
-            return core._reduce_with_indices(input, axis, _argmin_combine_tie_break_left, keep_dims=keep_dims)
+            return core._reduce_with_indices(
+                input, axis, _argmin_combine_tie_break_left, keep_dims=keep_dims
+            )
         else:
-            return core._reduce_with_indices(input, axis, _argmin_combine_tie_break_fast, keep_dims=keep_dims)
+            return core._reduce_with_indices(
+                input, axis, _argmin_combine_tie_break_fast, keep_dims=keep_dims
+            )
     else:
         if core.constexpr(input.dtype.primitive_bitwidth) < 32:
             if core.constexpr(input.dtype.is_floating()):
@@ -256,7 +287,13 @@ def min(input, axis=None, return_indices=False, return_indices_tie_break_left=Tr
 @jit
 @core._add_reduction_docstr("minimum index", tie_break_arg="tie_break_left")
 def argmin(input, axis, tie_break_left=True, keep_dims=False):
-    _, ret = min(input, axis, return_indices=True, return_indices_tie_break_left=tie_break_left, keep_dims=keep_dims)
+    _, ret = min(
+        input,
+        axis,
+        return_indices=True,
+        return_indices_tie_break_left=tie_break_left,
+        keep_dims=keep_dims,
+    )
     return ret
 
 
@@ -307,7 +344,9 @@ def _xor_combine(a, b):
 @jit
 @core._add_reduction_docstr("xor sum")
 def xor_sum(input, axis=None, keep_dims=False):
-    core.static_assert(input.type.scalar.is_int(), "xor_sum only supported for integers")
+    core.static_assert(
+        input.type.scalar.is_int(), "xor_sum only supported for integers"
+    )
     return core.reduce(input, axis, _xor_combine, keep_dims=keep_dims)
 
 
@@ -323,7 +362,9 @@ def _or_combine(x, y):
 @jit
 @core._add_reduction_docstr("reduce_or")
 def reduce_or(input, axis, keep_dims=False):
-    core.static_assert(input.type.scalar.is_int(), "reduce_or only supported for integers")
+    core.static_assert(
+        input.type.scalar.is_int(), "reduce_or only supported for integers"
+    )
     return core.reduce(input, axis, _or_combine, keep_dims=keep_dims)
 
 
@@ -393,11 +434,11 @@ def _compare_and_swap(x, flip, i: core.constexpr):
 
 @jit
 def _bitonic_merge_hypercube(x, stage: core.constexpr, order: core.constexpr):
-    '''
+    """
     order_type 0 == ascending
     order_type 1 == descending
     order_type 2 == alternating
-    '''
+    """
     # flip denotes whether to re-arrange sub-sequences of elements in ascending or
     # descending order.
     # if flip = 00000000... then all elements will be re-arranged ascendingly at this stage
@@ -414,7 +455,9 @@ def _bitonic_merge_hypercube(x, stage: core.constexpr, order: core.constexpr):
 
 
 @jit
-def _bitonic_merge(x, stage: core.constexpr, order: core.constexpr, n_dims: core.constexpr):
+def _bitonic_merge(
+    x, stage: core.constexpr, order: core.constexpr, n_dims: core.constexpr
+):
     h = core.reshape(x, [2] * _log2(x.numel))
     h = _bitonic_merge_hypercube(h, stage, order)
     x = core.reshape(h, x.shape)
@@ -422,7 +465,12 @@ def _bitonic_merge(x, stage: core.constexpr, order: core.constexpr, n_dims: core
 
 
 @jit
-def sort_impl(x, k: core.constexpr = None, dim: core.constexpr = None, descending: core.constexpr = core.CONSTEXPR_0):
+def sort_impl(
+    x,
+    k: core.constexpr = None,
+    dim: core.constexpr = None,
+    descending: core.constexpr = core.CONSTEXPR_0,
+):
     """
     Sorts a tensor along a specified dimension.
 
@@ -437,7 +485,9 @@ def sort_impl(x, k: core.constexpr = None, dim: core.constexpr = None, descendin
     """
     # handle default dimension or check that it is the most minor dim
     _dim: core.constexpr = len(x.shape) - 1 if dim is None else dim
-    core.static_assert(_dim == len(x.shape) - 1, "only minor dimension is currently supported")
+    core.static_assert(
+        _dim == len(x.shape) - 1, "only minor dimension is currently supported"
+    )
 
     log_n: core.constexpr = _log2(x.shape[_dim])
     log_k: core.constexpr = log_n if k is None else _log2(k)
@@ -454,7 +504,11 @@ def sort_impl(x, k: core.constexpr = None, dim: core.constexpr = None, descendin
     # select top k elements using bitonic top-k
     # https://www.doc.ic.ac.uk/~hlgr/pdfs/MassivelyParallelTopK.pdf
     for i in core.static_range(log_k + 1, log_n + 1):
-        h = max(h, axis=(_log2(h.numel) - 1 - log_k)) if descending else min(h, axis=(_log2(h.numel) - 1 - log_k))
+        h = (
+            max(h, axis=(_log2(h.numel) - 1 - log_k))
+            if descending
+            else min(h, axis=(_log2(h.numel) - 1 - log_k))
+        )
         h = _bitonic_merge_hypercube(h, log_k, 2 if i < log_n else descending)
 
     # reshape back:
@@ -473,10 +527,14 @@ def topk(x, k: core.constexpr, dim: core.constexpr = None):
 
 
 @jit
-def bitonic_merge(x, dim: core.constexpr = None, descending: core.constexpr = core.CONSTEXPR_0):
+def bitonic_merge(
+    x, dim: core.constexpr = None, descending: core.constexpr = core.CONSTEXPR_0
+):
     # handle default dimension or check that it is the most minor dim
     _dim: core.constexpr = len(x.shape) - 1 if dim is None else dim
-    core.static_assert(_dim == len(x.shape) - 1, "only minor dimension is currently supported")
+    core.static_assert(
+        _dim == len(x.shape) - 1, "only minor dimension is currently supported"
+    )
     n_dims: core.constexpr = _log2(x.shape[-1])
     return _bitonic_merge(x, n_dims, descending, n_dims)
 
@@ -485,7 +543,9 @@ def bitonic_merge(x, dim: core.constexpr = None, descending: core.constexpr = co
 def _get_flip_dim(dim, shape):
     if dim is None:
         dim = len(shape) - 1
-    if dim < 0:  # flip doesn't work if dim < 0 because the xor-swap for loop will start/end at the wrong index
+    if (
+        dim < 0
+    ):  # flip doesn't work if dim < 0 because the xor-swap for loop will start/end at the wrong index
         dim += len(shape)
     return dim
 
@@ -508,7 +568,9 @@ def flip(x, dim=None):
 
     # reshape the swap dimension to (2, 2, ..., 2)
     idtype = _get_int_dtype(bitwidth=x.dtype.primitive_bitwidth, signed=True)
-    y = core.reshape(x.to(idtype, bitcast=True), x.shape[:_dim] + [2] * steps + x.shape[_dim + 1:])
+    y = core.reshape(
+        x.to(idtype, bitcast=True), x.shape[:_dim] + [2] * steps + x.shape[_dim + 1 :]
+    )
     for i in core.static_range(steps):
         y = y ^ xor_sum(y, _dim + i, True)
     x = core.reshape(y, x.shape).to(x.dtype, bitcast=True)
@@ -541,9 +603,9 @@ def interleave(a, b):
 @jit
 def squeeze(x, dim: core.constexpr):
     core.static_assert(x.shape[dim] == 1)
-    return x.reshape(x.shape[:dim] + x.shape[dim + 1:])
+    return x.reshape(x.shape[:dim] + x.shape[dim + 1 :])
 
 
 @jit
 def unsqueeze(x, dim: core.constexpr):
-    return x.reshape(x.shape[:dim] + (1, ) + x.shape[dim:])
+    return x.reshape(x.shape[:dim] + (1,) + x.shape[dim:])

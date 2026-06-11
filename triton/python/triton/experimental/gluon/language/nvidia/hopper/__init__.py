@@ -5,10 +5,19 @@ from . import mbarrier, tma
 from ... import _core
 
 from typing import List, Tuple, TYPE_CHECKING
+
 if TYPE_CHECKING:
     from triton._C.libtriton import ir
 
-__all__ = ["async_copy", "fence_async_shared", "mbarrier", "mma_v2", "tma", "warpgroup_mma", "warpgroup_mma_wait"]
+__all__ = [
+    "async_copy",
+    "fence_async_shared",
+    "mbarrier",
+    "mma_v2",
+    "tma",
+    "warpgroup_mma",
+    "warpgroup_mma_wait",
+]
 
 
 @_core.builtin
@@ -32,7 +41,9 @@ class warpgroup_mma_accumulator_type(_core.base_type):
     def __str__(self) -> str:
         return f"warpgroup_mma_accumulator<{self.tensor_type}>"
 
-    def _unflatten_ir(self, handles: List[ir.value], cursor: int) -> Tuple[warpgroup_mma_accumulator, int]:
+    def _unflatten_ir(
+        self, handles: List[ir.value], cursor: int
+    ) -> Tuple[warpgroup_mma_accumulator, int]:
         return warpgroup_mma_accumulator(handles[cursor], self.tensor_type), cursor + 1
 
     def _flatten_ir_types(self, builder: ir.builder, out: List[ir.type]) -> None:
@@ -64,8 +75,17 @@ def warpgroup_mma_init(value, _semantic=None):
 
 
 @_core.builtin
-def warpgroup_mma(a, b, acc, *, use_acc=True, precision=None, max_num_imprecise_acc=None, is_async=False,
-                  _semantic=None):
+def warpgroup_mma(
+    a,
+    b,
+    acc,
+    *,
+    use_acc=True,
+    precision=None,
+    max_num_imprecise_acc=None,
+    is_async=False,
+    _semantic=None,
+):
     """
     Perform warpgroup MMA (Tensor Core) operations.
     acc = a * b + (acc if use_acc else 0)
@@ -92,19 +112,32 @@ def warpgroup_mma(a, b, acc, *, use_acc=True, precision=None, max_num_imprecise_
     K = a.type.shape[-1]
     if max_num_imprecise_acc is None:
         if a.dtype.is_fp8() and b.dtype.is_fp8():
-            max_num_imprecise_acc = _semantic.builder.options.max_num_imprecise_acc_default
+            max_num_imprecise_acc = (
+                _semantic.builder.options.max_num_imprecise_acc_default
+            )
         else:
             max_num_imprecise_acc = 0
     else:
         if a.dtype.is_fp8() and b.dtype.is_fp8() and max_num_imprecise_acc > K:
-            raise ValueError(f"max_num_imprecise_acc ({max_num_imprecise_acc}) must be <= K ({K})")
+            raise ValueError(
+                f"max_num_imprecise_acc ({max_num_imprecise_acc}) must be <= K ({K})"
+            )
 
     max_num_imprecise_acc = _core._unwrap_if_constexpr(max_num_imprecise_acc)
     is_async = _core._unwrap_if_constexpr(is_async)
 
-    handle = _semantic.builder.create_warpgroup_mma(a.handle, b.handle, acc.handle, use_acc.handle, precision,
-                                                    max_num_imprecise_acc, is_async)
-    tensor_ty = acc.type.tensor_type if isinstance(acc, warpgroup_mma_accumulator) else acc.type
+    handle = _semantic.builder.create_warpgroup_mma(
+        a.handle,
+        b.handle,
+        acc.handle,
+        use_acc.handle,
+        precision,
+        max_num_imprecise_acc,
+        is_async,
+    )
+    tensor_ty = (
+        acc.type.tensor_type if isinstance(acc, warpgroup_mma_accumulator) else acc.type
+    )
     if is_async:
         return warpgroup_mma_accumulator(handle, tensor_ty)
     else:
@@ -125,7 +158,10 @@ def warpgroup_mma_wait(num_outstanding=0, deps=None, _semantic=None):
     deps_handles = [x.handle for x in deps] if deps is not None else []
     num_outstanding = _core._unwrap_if_constexpr(num_outstanding)
     results = _semantic.builder.create_warpgroup_mma_wait(deps_handles, num_outstanding)
-    result_types = [dep.type.tensor_type if isinstance(dep, warpgroup_mma_accumulator) else dep.type for dep in deps]
+    result_types = [
+        dep.type.tensor_type if isinstance(dep, warpgroup_mma_accumulator) else dep.type
+        for dep in deps
+    ]
     results = unflatten_ir_values(results, result_types)
     if len(deps) == 1:
         return next(results)

@@ -20,12 +20,20 @@ def _find_concrete_subclasses(module: ModuleType, base_class: Type[T]) -> Type[T
     ret: list[Type[T]] = []
     for attr_name in dir(module):
         attr = getattr(module, attr_name)
-        if isinstance(attr, type) and issubclass(attr, base_class) and not inspect.isabstract(attr):
+        if (
+            isinstance(attr, type)
+            and issubclass(attr, base_class)
+            and not inspect.isabstract(attr)
+        ):
             ret.append(attr)
     if len(ret) == 0:
-        raise RuntimeError(f"Found 0 concrete subclasses of {base_class} in {module}: {ret}")
+        raise RuntimeError(
+            f"Found 0 concrete subclasses of {base_class} in {module}: {ret}"
+        )
     if len(ret) > 1:
-        raise RuntimeError(f"Found >1 concrete subclasses of {base_class} in {module}: {ret}")
+        raise RuntimeError(
+            f"Found >1 concrete subclasses of {base_class} in {module}: {ret}"
+        )
     return ret[0]
 
 
@@ -46,20 +54,24 @@ def _discover_backends() -> dict[str, Backend]:
         for name in os.listdir(root):
             if not os.path.isdir(os.path.join(root, name)):
                 continue
-            if name.startswith('__'):
+            if name.startswith("__"):
                 continue
             compiler = importlib.import_module(f"triton.backends.{name}.compiler")
             driver = importlib.import_module(f"triton.backends.{name}.driver")
-            backends[name] = Backend(_find_concrete_subclasses(compiler, BaseBackend),
-                                     _find_concrete_subclasses(driver, DriverBase))
+            backends[name] = Backend(
+                _find_concrete_subclasses(compiler, BaseBackend),
+                _find_concrete_subclasses(driver, DriverBase),
+            )
         return backends
 
     # Default path: discover via entry points for out-of-tree/downstream plugins.
     for ep in entry_points().select(group="triton.backends"):
         compiler = importlib.import_module(f"{ep.value}.compiler")
         driver = importlib.import_module(f"{ep.value}.driver")
-        backends[ep.name] = Backend(_find_concrete_subclasses(compiler, BaseBackend),  # type: ignore
-                                    _find_concrete_subclasses(driver, DriverBase))  # type: ignore
+        backends[ep.name] = Backend(
+            _find_concrete_subclasses(compiler, BaseBackend),  # type: ignore
+            _find_concrete_subclasses(driver, DriverBase),
+        )  # type: ignore
     return backends
 
 

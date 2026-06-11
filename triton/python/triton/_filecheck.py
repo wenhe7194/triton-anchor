@@ -23,7 +23,6 @@ filecheck_path = os.path.join(triton_dir, "FileCheck")
 
 
 class MatchError(ValueError):
-
     def __init__(self, message, module_str):
         super().__init__(message)
         self.module_str = module_str
@@ -44,10 +43,17 @@ def run_filecheck(name, module_str, check_template):
 
         try:
             subprocess.check_output(
-                [filecheck_path, temp_expected, "--input-file", temp_module, "--dump-input-context=50"],
-                stderr=subprocess.STDOUT)
+                [
+                    filecheck_path,
+                    temp_expected,
+                    "--input-file",
+                    temp_module,
+                    "--dump-input-context=50",
+                ],
+                stderr=subprocess.STDOUT,
+            )
         except subprocess.CalledProcessError as error:
-            decoded = error.output.decode('unicode_escape')
+            decoded = error.output.decode("unicode_escape")
             raise ValueError(decoded)
 
 
@@ -63,7 +69,9 @@ def run_parser(kernel_fn, args=(), kwargs={}, target=stub_target):
     )
 
     bound_args, specialization, options = binder(*args, **kwargs)
-    options, signature, constexprs, attrs = kernel_fn._pack_args(backend, kwargs, bound_args, specialization, options)
+    options, signature, constexprs, attrs = kernel_fn._pack_args(
+        backend, kwargs, bound_args, specialization, options
+    )
     source_cls = GluonASTSource if kernel_fn.is_gluon() else ASTSource
     src = source_cls(kernel_fn, signature, constexprs, attrs)
 
@@ -81,7 +89,9 @@ def run_filecheck_test(kernel_fn):
     assert isinstance(kernel_fn, triton.runtime.JITFunction)
     check_template = inspect.getsource(kernel_fn.fn)
     if check_template is None:
-        raise ValueError("kernel function must have a docstring with FileCheck template")
+        raise ValueError(
+            "kernel function must have a docstring with FileCheck template"
+        )
     mlir_module = run_parser(kernel_fn)
 
     run_filecheck("placeholder", mlir_module.str_nodebug(), check_template)

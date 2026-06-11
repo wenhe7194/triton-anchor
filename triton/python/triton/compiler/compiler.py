@@ -7,7 +7,12 @@ from ..backends.compiler import Language
 from ..backends.compiler import BaseBackend, GPUTarget
 from .. import __version__, knobs
 from ..runtime.autotuner import OutOfResources
-from ..runtime.cache import get_cache_manager, get_dump_manager, get_override_manager, get_cache_key
+from ..runtime.cache import (
+    get_cache_manager,
+    get_dump_manager,
+    get_override_manager,
+    get_cache_key,
+)
 from ..runtime.driver import driver
 from ..tools.disasm import get_sass
 from pathlib import Path
@@ -39,18 +44,17 @@ arg_type_pattern = {
 def convert_type_repr(x):
     # Currently we only capture the pointer type and assume the pointer is on global memory.
     # TODO: Capture and support shared memory space
-    match = re.search(r'!tt\.ptr<([^,]+)', x)
-    tma = re.search(r'tt.nv_tma_desc = 1', x)
+    match = re.search(r"!tt\.ptr<([^,]+)", x)
+    tma = re.search(r"tt.nv_tma_desc = 1", x)
     if tma is not None:
-        return 'nvTmaDesc'
-    x = re.sub(r' {[^}]+}', '', x)
+        return "nvTmaDesc"
+    x = re.sub(r" {[^}]+}", "", x)
     if match is not None:
-        return '*' + convert_type_repr(match.group(1))
+        return "*" + convert_type_repr(match.group(1))
     return x
 
 
 class ASTSource:
-
     def __init__(self, fn, signature, constexprs=None, attrs=None) -> None:
         self.fn = fn
         self.language = Language.TRITON
@@ -60,7 +64,7 @@ class ASTSource:
         self.constants = dict()
         if constexprs is not None:
             for k, v in constexprs.items():
-                k = (fn.arg_names.index(k), ) if isinstance(k, str) else k
+                k = (fn.arg_names.index(k),) if isinstance(k, str) else k
                 assert isinstance(k, tuple)
                 self.constants[k] = v
         self.attrs = attrs or dict()
@@ -70,22 +74,30 @@ class ASTSource:
 
     def hash(self):
         sorted_sig = [v for k, v in sorted(self.signature.items())]
-        get_key = lambda x: x.cache_key if hasattr(x, 'cache_key') else str(x)
-        constants_key = '-'.join([get_key(v) for k, v in sorted(self.constants.items())])
+        get_key = lambda x: x.cache_key if hasattr(x, "cache_key") else str(x)
+        constants_key = "-".join(
+            [get_key(v) for k, v in sorted(self.constants.items())]
+        )
         key = f"{self.fn.cache_key}-{str(self.attrs)}-{sorted_sig}-{constants_key}"
         return hashlib.sha256(key.encode("utf-8")).hexdigest()
 
     def make_ir(self, target: GPUTarget, options, codegen_fns, module_map, context):
         from .code_generator import ast_to_ttir
-        return ast_to_ttir(self.fn, self, context=context, options=options, codegen_fns=codegen_fns,
-                           module_map=module_map)
+
+        return ast_to_ttir(
+            self.fn,
+            self,
+            context=context,
+            options=options,
+            codegen_fns=codegen_fns,
+            module_map=module_map,
+        )
 
     def parse_options(self):
         return dict()
 
 
 class IRSource:
-
     def __init__(self, path, context, backend):
         self.path = path
         path = Path(path)
@@ -122,10 +134,10 @@ class IRSource:
         if self.ext == "ttgir":
             num_warps = self.module.get_int_attr("ttg.num-warps")
             assert num_warps is not None, "Unable to parse ttg.num-warps attribute"
-            options = {'num_warps': num_warps}
+            options = {"num_warps": num_warps}
             num_ctas = self.module.get_int_attr("ttg.num-ctas")
             if num_ctas is not None:
-                options['num_ctas'] = num_ctas
+                options["num_ctas"] = num_ctas
             return options
         return dict()
 
@@ -174,7 +186,7 @@ def filter_traceback(e: BaseException):
             frames.append(tb)
         tb = tb.tb_next
 
-    for (cur_frame, next_frame) in zip(frames, frames[1:]):
+    for cur_frame, next_frame in zip(frames, frames[1:]):
         cur_frame.tb_next = next_frame
 
     if not frames:
@@ -185,7 +197,6 @@ def filter_traceback(e: BaseException):
 
 
 class CompileTimer:
-
     def __init__(self) -> None:
         self.start: float = time.time()
         self.ir_initialization_end: float | None = None
@@ -245,7 +256,9 @@ def compile(src, target=None, options=None, _env_vars=None):
     env_vars = get_cache_invalidating_env_vars() if _env_vars is None else _env_vars
     key = get_cache_key(src, backend, options, env_vars=env_vars)
     if knobs.runtime.add_stages_inspection_hook is not None:
-        inspect_stages_key, inspect_stages_hash = knobs.runtime.add_stages_inspection_hook()
+        inspect_stages_key, inspect_stages_hash = (
+            knobs.runtime.add_stages_inspection_hook()
+        )
         key += inspect_stages_key
     hash = hashlib.sha256(key.encode("utf-8")).hexdigest()
     fn_cache_manager = get_cache_manager(hash)
@@ -329,7 +342,9 @@ def compile(src, target=None, options=None, _env_vars=None):
         if fn_override_manager is None:
             # Users can override kernels at scale by setting `ir_override` in autotune config
             # without TRITON_KERNEL_OVERRIDE
-            if (ir_override := metadata.get("ir_override", None)) and ir_override.endswith(f".{ext}"):
+            if (
+                ir_override := metadata.get("ir_override", None)
+            ) and ir_override.endswith(f".{ext}"):
                 next_module = parse(ir_override, ext, context)
         elif full_name := fn_override_manager.get_file(ir_filename):
             print(f"\nOverriding kernel with file {full_name}")
@@ -351,28 +366,36 @@ def compile(src, target=None, options=None, _env_vars=None):
         if compilation_listener:
             timer.stage_finished(ext)
     # write-back metadata
-    metadata_group[metadata_filename] = fn_cache_manager.put(json.dumps(metadata, default=vars), metadata_filename,
-                                                             binary=False)
+    metadata_group[metadata_filename] = fn_cache_manager.put(
+        json.dumps(metadata, default=vars), metadata_filename, binary=False
+    )
     fn_cache_manager.put_group(metadata_filename, metadata_group)
 
     # notify any listener
     if compilation_listener:
-        compilation_listener(src=src, metadata=metadata, metadata_group=metadata_group, times=timer.end(),
-                             cache_hit=False)
+        compilation_listener(
+            src=src,
+            metadata=metadata,
+            metadata_group=metadata_group,
+            times=timer.end(),
+            cache_hit=False,
+        )
     # return handle to compiled kernel
     return CompiledKernel(src, metadata_group, hash)
 
 
 def make_backend(target: GPUTarget) -> BaseBackend:
-    actives = [x.compiler for x in backends.values() if x.compiler.supports_target(target)]
+    actives = [
+        x.compiler for x in backends.values() if x.compiler.supports_target(target)
+    ]
     if len(actives) != 1:
         raise RuntimeError(
-            f"{len(actives)} compatible backends for target ({target.backend}) ({actives}). There should only be one.")
+            f"{len(actives)} compatible backends for target ({target.backend}) ({actives}). There should only be one."
+        )
     return actives[0](target)
 
 
 class LazyDict:
-
     def __init__(self, data):
         self.data = data
         self.extras = []
@@ -388,7 +411,6 @@ class LazyDict:
 
 
 class AsmDict(dict):
-
     def __missing__(self, key):
 
         if key == "sass":
@@ -405,15 +427,19 @@ def _raise_error(err, *args, **kwargs):
 
 
 class CompiledKernel:
-
     def __init__(self, src, metadata_group, hash):
         from collections import namedtuple
-        metadata_path = next((Path(p) for c, p in metadata_group.items() if c.endswith(".json")))
+
+        metadata_path = next(
+            (Path(p) for c, p in metadata_group.items() if c.endswith(".json"))
+        )
         metadata = json.loads(metadata_path.read_text())
         # JSON serialization dumps the target as a dict. Restore it to a GPUTarget.
-        target = metadata['target']
-        metadata['target'] = GPUTarget(target['backend'], target['arch'], target['warp_size'])
-        KernelMetadata = namedtuple('KernelMetadata', sorted(list(metadata.keys())))
+        target = metadata["target"]
+        metadata["target"] = GPUTarget(
+            target["backend"], target["arch"], target["warp_size"]
+        )
+        KernelMetadata = namedtuple("KernelMetadata", sorted(list(metadata.keys())))
         self.metadata = KernelMetadata(**metadata)
         backend = make_backend(self.metadata.target)
         self.packed_metadata = backend.pack_metadata(self.metadata)
@@ -421,12 +447,18 @@ class CompiledKernel:
         self.hash = hash
         self.name = self.metadata.name
         # stores the text of each level of IR that was generated during compilation
-        asm_files = [Path(p) for c, p in metadata_group.items() if not c.endswith(".json")]
+        asm_files = [
+            Path(p) for c, p in metadata_group.items() if not c.endswith(".json")
+        ]
         binary_ext = backend.binary_ext
-        self.asm = AsmDict({
-            file.suffix[1:]: file.read_bytes() if file.suffix[1:] == binary_ext else file.read_text()
-            for file in asm_files
-        })
+        self.asm = AsmDict(
+            {
+                file.suffix[1:]: file.read_bytes()
+                if file.suffix[1:] == binary_ext
+                else file.read_text()
+                for file in asm_files
+            }
+        )
         self.metadata_group = metadata_group
         self.kernel = self.asm[binary_ext]
         # binaries are lazily initialized
@@ -461,17 +493,32 @@ class CompiledKernel:
             # Use blackwell max tmem size for now, this should be moved in device properties
             max_tmem_size = 512  # tmem size in number of columns
             if self.metadata.tmem_size > max_tmem_size:
-                raise_(OutOfResources(self.metadata.tmem_size, max_tmem_size, "tensor memory"))
+                raise_(
+                    OutOfResources(
+                        self.metadata.tmem_size, max_tmem_size, "tensor memory"
+                    )
+                )
         if knobs.runtime.kernel_load_start_hook is not None:
-            knobs.runtime.kernel_load_start_hook(self.module, self.function, self.name, self.metadata_group, self.hash)
+            knobs.runtime.kernel_load_start_hook(
+                self.module, self.function, self.name, self.metadata_group, self.hash
+            )
         # TODO: n_regs, n_spills should be metadata generated when calling `ptxas`
-        self.module, self.function, self.n_regs, self.n_spills, self.n_max_threads = driver.active.utils.load_binary(
-            self.name, self.kernel, self.metadata.shared, device)
+        self.module, self.function, self.n_regs, self.n_spills, self.n_max_threads = (
+            driver.active.utils.load_binary(
+                self.name, self.kernel, self.metadata.shared, device
+            )
+        )
         warp_size = driver.active.get_current_target().warp_size
         if self.metadata.num_warps * warp_size > self.n_max_threads:
-            raise_(OutOfResources(self.metadata.num_warps * warp_size, self.n_max_threads, "threads"))
+            raise_(
+                OutOfResources(
+                    self.metadata.num_warps * warp_size, self.n_max_threads, "threads"
+                )
+            )
         if knobs.runtime.kernel_load_end_hook is not None:
-            knobs.runtime.kernel_load_end_hook(self.module, self.function, self.name, self.metadata_group, self.hash)
+            knobs.runtime.kernel_load_end_hook(
+                self.module, self.function, self.name, self.metadata_group, self.hash
+            )
 
     @property
     def run(self):
@@ -498,7 +545,17 @@ class CompiledKernel:
                 device = driver.active.get_current_device()
                 stream = driver.active.get_current_stream(device)
             launch_metadata = self.launch_metadata(grid, stream, *args)
-            self.run(grid[0], grid[1], grid[2], stream, self.function, self.packed_metadata, launch_metadata,
-                     knobs.runtime.launch_enter_hook, knobs.runtime.launch_exit_hook, *args)
+            self.run(
+                grid[0],
+                grid[1],
+                grid[2],
+                stream,
+                self.function,
+                self.packed_metadata,
+                launch_metadata,
+                knobs.runtime.launch_enter_hook,
+                knobs.runtime.launch_exit_hook,
+                *args,
+            )
 
         return runner

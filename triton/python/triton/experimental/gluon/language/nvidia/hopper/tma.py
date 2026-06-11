@@ -30,12 +30,16 @@ class tensor_descriptor_type(base_type):
             self.layout._to_ir(builder),
         )
 
-    def _unflatten_ir(self, handles: List[ir.value], cursor: int) -> Tuple[tensor_descriptor, int]:
+    def _unflatten_ir(
+        self, handles: List[ir.value], cursor: int
+    ) -> Tuple[tensor_descriptor, int]:
         handle = handles[cursor]
         cursor += 1
         shape, cursor = self.shape_type._unflatten_ir(handles, cursor)
         strides, cursor = self.strides_type._unflatten_ir(handles, cursor)
-        value = tensor_descriptor(handle, shape, strides, self.block_type, layout=self.layout)
+        value = tensor_descriptor(
+            handle, shape, strides, self.block_type, layout=self.layout
+        )
         return value, cursor
 
     def _flatten_ir_types(self, builder: ir.builder, out: List[ir.type]) -> None:
@@ -54,14 +58,23 @@ class tensor_descriptor_type(base_type):
 
 
 class tensor_descriptor(base_value):
-
-    def __init__(self, handle, shape: List[ttgl.tensor], strides: List[ttgl.tensor], block_type: ttgl.block_type,
-                 layout: NVMMASharedLayout):
+    def __init__(
+        self,
+        handle,
+        shape: List[ttgl.tensor],
+        strides: List[ttgl.tensor],
+        block_type: ttgl.block_type,
+        layout: NVMMASharedLayout,
+    ):
         self.handle = handle
         self.shape = ttgl.tuple(shape)
         self.strides = ttgl.tuple(strides)
-        self.type = tensor_descriptor_type(block_type, shape_type=self.shape.type, strides_type=self.strides.type,
-                                           layout=layout)
+        self.type = tensor_descriptor_type(
+            block_type,
+            shape_type=self.shape.type,
+            strides_type=self.strides.type,
+            layout=layout,
+        )
 
     def _flatten_ir(self, handles: List[ir.value]) -> None:
         handles.append(self.handle)
@@ -86,19 +99,28 @@ class tensor_descriptor(base_value):
 
 
 @builtin
-def async_copy_global_to_shared(tensor_desc, coord, barrier, result, pred=True, _semantic=None):
-    assert tensor_desc.layout == result.layout, f"tensor descriptor layout {tensor_desc.layout} does not match result shared memory layout {result.layout}"
+def async_copy_global_to_shared(
+    tensor_desc, coord, barrier, result, pred=True, _semantic=None
+):
+    assert tensor_desc.layout == result.layout, (
+        f"tensor descriptor layout {tensor_desc.layout} does not match result shared memory layout {result.layout}"
+    )
     coord = _semantic._convert_to_ir_values(coord, require_i64=False)
     pred = _semantic.to_tensor(pred)
-    _semantic.builder.create_async_tma_copy_global_to_local(tensor_desc.handle, coord, barrier.handle, result.handle,
-                                                            pred.handle)
+    _semantic.builder.create_async_tma_copy_global_to_local(
+        tensor_desc.handle, coord, barrier.handle, result.handle, pred.handle
+    )
 
 
 @builtin
 def async_copy_shared_to_global(tensor_desc, coord, src, _semantic=None):
-    assert tensor_desc.layout == src.layout, f"tensor descriptor layout {tensor_desc.layout} does not match source shared memory layout {src.layout}"
+    assert tensor_desc.layout == src.layout, (
+        f"tensor descriptor layout {tensor_desc.layout} does not match source shared memory layout {src.layout}"
+    )
     coord = _semantic._convert_to_ir_values(coord, require_i64=False)
-    _semantic.builder.create_async_tma_copy_local_to_global(tensor_desc.handle, coord, src.handle)
+    _semantic.builder.create_async_tma_copy_local_to_global(
+        tensor_desc.handle, coord, src.handle
+    )
 
 
 @builtin
@@ -126,7 +148,9 @@ def make_tensor_descriptor(
     if len(strides) != ndim:
         raise ValueError(f"Expected {ndim} strides but got {len(strides)}")
     if len(block_shape) != ndim:
-        raise ValueError(f"Expected block_shape to have {ndim} dimensions but got {len(block_shape)}")
+        raise ValueError(
+            f"Expected block_shape to have {ndim} dimensions but got {len(block_shape)}"
+        )
     assert isinstance(base.dtype, ttgl.pointer_type)
     elem_size = base.dtype.element_ty.primitive_bitwidth // 8
     contig_dim_size = ttgl._unwrap_if_constexpr(block_shape[-1])
@@ -140,7 +164,9 @@ def make_tensor_descriptor(
         raise ValueError(f"Tensor descriptor last dim must be 1 but got {last_stride}")
 
     shape = [_semantic.make_scalar(x, ttgl.int32) for x in shape]
-    strides = [_semantic.make_scalar(ttgl._unwrap_if_constexpr(x), ttgl.int64) for x in strides]
+    strides = [
+        _semantic.make_scalar(ttgl._unwrap_if_constexpr(x), ttgl.int64) for x in strides
+    ]
 
     # Check whether `block_shape` is static
     block_shape = ttgl._unwrap_shape(block_shape)
@@ -152,8 +178,9 @@ def make_tensor_descriptor(
     padding = _semantic._str_to_padding_option(padding_option)
 
     layout = _unwrap_if_constexpr(layout)
-    assert isinstance(layout, NVMMASharedLayout), \
+    assert isinstance(layout, NVMMASharedLayout), (
         "Expected layout to be a NVMMASharedLayout"
+    )
 
     shape_type = ttgl.tuple(shape).type
     strides_type = ttgl.tuple(strides).type

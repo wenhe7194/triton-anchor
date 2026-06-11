@@ -2,7 +2,7 @@ from . import core
 from functools import wraps
 from typing import List
 
-T = core.TypeVar('T')
+T = core.TypeVar("T")
 
 
 def _check_dtype(dtypes: List[str]) -> T:
@@ -22,7 +22,9 @@ def _check_dtype(dtypes: List[str]) -> T:
             all_args = list(args) + list(kwargs.values())
             for arg in [a for a in all_args if isinstance(a, core.tensor)]:
                 if arg.type.scalar.name not in dtypes:
-                    raise ValueError(f"Expected dtype {dtypes} but got {arg.type.scalar.name}")
+                    raise ValueError(
+                        f"Expected dtype {dtypes} but got {arg.type.scalar.name}"
+                    )
             return fn(*args, **kwargs)
 
         return check
@@ -156,7 +158,9 @@ def sqrt(x, _semantic=None):
 
 @core.builtin
 @_check_dtype(dtypes=["fp32"])
-@_add_math_1arg_docstr("precise square root (rounding to nearest wrt the IEEE standard)")
+@_add_math_1arg_docstr(
+    "precise square root (rounding to nearest wrt the IEEE standard)"
+)
 @core._tensor_member_fn
 def sqrt_rn(x, _semantic=None):
     x = _semantic.to_tensor(x)
@@ -207,7 +211,9 @@ def div_rn(x, y, _semantic=None):
     x = _semantic.to_tensor(x)
     y = _semantic.to_tensor(y)
     x, y = core.binary_op_type_legalization(x, y, _semantic)
-    return core.tensor(_semantic.builder.create_precise_divf(x.handle, y.handle), x.type)
+    return core.tensor(
+        _semantic.builder.create_precise_divf(x.handle, y.handle), x.type
+    )
 
 
 @core.builtin
@@ -246,4 +252,6 @@ def fma(x, y, z, _semantic=None):
     x, y = core.binary_op_type_legalization(x, y, _semantic)
     z, x = core.binary_op_type_legalization(z, x, _semantic)
     z, y = core.binary_op_type_legalization(z, y, _semantic)
-    return core.tensor(_semantic.builder.create_fma(x.handle, y.handle, z.handle), x.type)
+    return core.tensor(
+        _semantic.builder.create_fma(x.handle, y.handle, z.handle), x.type
+    )

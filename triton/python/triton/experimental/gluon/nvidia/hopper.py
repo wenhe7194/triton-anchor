@@ -1,6 +1,10 @@
 from dataclasses import dataclass
 from typing import List, Any
-from triton._utils import validate_block_shape, canonicalize_dtype, get_primitive_bitwidth
+from triton._utils import (
+    validate_block_shape,
+    canonicalize_dtype,
+    get_primitive_bitwidth,
+)
 from triton.experimental.gluon.language._layouts import NVMMASharedLayout
 
 __all__ = ["TensorDescriptor"]
@@ -30,13 +34,21 @@ class TensorDescriptor:
         for shape_dim in self.shape:
             assert shape_dim > 0, "shape must be positive"
         assert self.strides[-1] == 1, "Last dimension must be contiguous"
-        assert isinstance(self.layout, NVMMASharedLayout), "Layout must be NVMMASharedLayout"
-        assert self.padding == "zero" or self.padding == "nan", "Illegal value for padding"
+        assert isinstance(self.layout, NVMMASharedLayout), (
+            "Layout must be NVMMASharedLayout"
+        )
+        assert self.padding == "zero" or self.padding == "nan", (
+            "Illegal value for padding"
+        )
         if self.padding == "nan":
-            assert self.base.dtype.is_floating_point, "Padding option `nan` is only supported for floating point tensors"
+            assert self.base.dtype.is_floating_point, (
+                "Padding option `nan` is only supported for floating point tensors"
+            )
 
     @staticmethod
-    def from_tensor(tensor: Any, block_shape: List[int], layout: NVMMASharedLayout, padding="zero"):
+    def from_tensor(
+        tensor: Any, block_shape: List[int], layout: NVMMASharedLayout, padding="zero"
+    ):
         return TensorDescriptor(
             tensor,
             tensor.shape,

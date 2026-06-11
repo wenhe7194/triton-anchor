@@ -6,12 +6,13 @@ from ..backends import backends, DriverBase
 def _create_driver() -> DriverBase:
     active_drivers = [x.driver for x in backends.values() if x.driver.is_active()]
     if len(active_drivers) != 1:
-        raise RuntimeError(f"{len(active_drivers)} active drivers ({active_drivers}). There should only be one.")
+        raise RuntimeError(
+            f"{len(active_drivers)} active drivers ({active_drivers}). There should only be one."
+        )
     return active_drivers[0]()
 
 
 class DriverConfig:
-
     def __init__(self) -> None:
         self._default: DriverBase | None = None
         self._active: DriverBase | None = None

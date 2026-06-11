@@ -23,7 +23,6 @@ class DistributedLayout:
 
 @dataclass(frozen=True)
 class AutoLayout(DistributedLayout):
-
     def _to_ir(self, builder):
         return builder.get_auto_layout()
 
@@ -37,7 +36,6 @@ class AutoLayout(DistributedLayout):
 
 @dataclass(frozen=True)
 class CoalescedLayout(DistributedLayout):
-
     def _to_ir(self, builder):
         return builder.get_coalesced_layout()
 
@@ -61,6 +59,7 @@ class BlockedLayout(DistributedLayout):
         order (List[int]): The ordering of dimensions for partitioning.
         cga_layout (Optional[List[List[int]]]): Bases describing how CTAs tile each dimension.
     """
+
     size_per_thread: List[int]
     threads_per_warp: List[int]
     warps_per_cta: List[int]
@@ -68,8 +67,12 @@ class BlockedLayout(DistributedLayout):
     cga_layout: List[List[int]] = field(default_factory=list)
 
     def __post_init__(self):
-        super().__setattr__("size_per_thread", _unwrap_if_constexpr(self.size_per_thread))
-        super().__setattr__("threads_per_warp", _unwrap_if_constexpr(self.threads_per_warp))
+        super().__setattr__(
+            "size_per_thread", _unwrap_if_constexpr(self.size_per_thread)
+        )
+        super().__setattr__(
+            "threads_per_warp", _unwrap_if_constexpr(self.threads_per_warp)
+        )
         super().__setattr__("warps_per_cta", _unwrap_if_constexpr(self.warps_per_cta))
         super().__setattr__("order", _unwrap_if_constexpr(self.order))
         super().__setattr__("cga_layout", _unwrap_if_constexpr(self.cga_layout))
@@ -99,12 +102,23 @@ class BlockedLayout(DistributedLayout):
         threads_per_warp = stringify(self.threads_per_warp)
         warps_per_cta = stringify(self.warps_per_cta)
         order = stringify(self.order)
-        cga_layout = "_".join("~".join(map(str, vec)) for vec in self.cga_layout) if self.cga_layout else ""
+        cga_layout = (
+            "_".join("~".join(map(str, vec)) for vec in self.cga_layout)
+            if self.cga_layout
+            else ""
+        )
         return f"B{size_per_thread}_{threads_per_warp}_{warps_per_cta}_{order}_{cga_layout}B"
 
     def __hash__(self):
-        return hash((tuple(self.size_per_thread), tuple(self.threads_per_warp), tuple(self.warps_per_cta),
-                     tuple(self.order), tuple(tuple(vec) for vec in self.cga_layout)))
+        return hash(
+            (
+                tuple(self.size_per_thread),
+                tuple(self.threads_per_warp),
+                tuple(self.warps_per_cta),
+                tuple(self.order),
+                tuple(tuple(vec) for vec in self.cga_layout),
+            )
+        )
 
     @property
     def rank(self):
@@ -120,6 +134,7 @@ class SliceLayout(DistributedLayout):
         dim (int): The dimension index to slice.
         parent (DistributedLayout): The parent layout before slicing.
     """
+
     dim: int
     parent: DistributedLayout
 
@@ -151,7 +166,9 @@ class SliceLayout(DistributedLayout):
 
         rank = self.parent.rank
         assert 0 <= self.dim < rank
-        return [basis[:self.dim] + basis[self.dim + 1:] for basis in parent_cga_layout]
+        return [
+            basis[: self.dim] + basis[self.dim + 1 :] for basis in parent_cga_layout
+        ]
 
 
 @dataclass(frozen=True)
@@ -167,6 +184,7 @@ class DistributedLinearLayout(DistributedLayout):
         block_bases (List[List[int]]): Bases for block-level distribution.
         shape (List[int]): The tensor global shape.
     """
+
     reg_bases: List[List[int]]
     lane_bases: List[List[int]]
     warp_bases: List[List[int]]
@@ -192,20 +210,27 @@ class DistributedLinearLayout(DistributedLayout):
             assert len(basis) == rank
 
     def _to_ir(self, builder):
-        return builder.get_distributed_linear_layout(self.reg_bases, self.lane_bases, self.warp_bases, self.block_bases,
-                                                     self.shape)
+        return builder.get_distributed_linear_layout(
+            self.reg_bases,
+            self.lane_bases,
+            self.warp_bases,
+            self.block_bases,
+            self.shape,
+        )
 
     def mangle(self):
         return f"DLL{self.reg_bases}_{self.lane_bases}_{self.warp_bases}_{self.block_bases}_{self.shape}DLL"
 
     def __hash__(self):
-        return hash((
-            tuple(map(tuple, self.reg_bases)),
-            tuple(map(tuple, self.lane_bases)),
-            tuple(map(tuple, self.warp_bases)),
-            tuple(map(tuple, self.block_bases)),
-            tuple(self.shape),
-        ))
+        return hash(
+            (
+                tuple(map(tuple, self.reg_bases)),
+                tuple(map(tuple, self.lane_bases)),
+                tuple(map(tuple, self.warp_bases)),
+                tuple(map(tuple, self.block_bases)),
+                tuple(self.shape),
+            )
+        )
 
     @property
     def rank(self):
@@ -222,6 +247,7 @@ class DotOperandLayout(DistributedLayout):
         parent (DistributedLayout): The parent layout, representing the MMA.
         k_width (int): Number of elements per 32-bits.
     """
+
     operand_index: int
     parent: DistributedLayout
     k_width: int
@@ -232,7 +258,9 @@ class DotOperandLayout(DistributedLayout):
         super().__setattr__("k_width", _unwrap_if_constexpr(self.k_width))
 
     def _to_ir(self, builder):
-        return builder.get_dot_operand_layout(self.operand_index, self.parent._to_ir(builder), self.k_width)
+        return builder.get_dot_operand_layout(
+            self.operand_index, self.parent._to_ir(builder), self.k_width
+        )
 
     def mangle(self) -> str:
         return f"DO{self.operand_index}_{self.parent.mangle()}_{self.k_width}DO"
@@ -246,7 +274,9 @@ class DotOperandLayout(DistributedLayout):
 
     @property
     def cga_layout(self):
-        parent_cga_layout = _unwrap_if_constexpr(getattr(self.parent, "cga_layout", [])) or []
+        parent_cga_layout = (
+            _unwrap_if_constexpr(getattr(self.parent, "cga_layout", [])) or []
+        )
         if not parent_cga_layout:
             return []
 
@@ -275,6 +305,7 @@ class NVMMADistributedLayout(DistributedLayout):
         instr_shape (List[int]): Instruction shape for MMA.
         cga_layout (Optional[List[List[int]]]): Bases describing CTA tiling.
     """
+
     version: List[int]
     warps_per_cta: List[int]
     instr_shape: List[int]
@@ -295,12 +326,22 @@ class NVMMADistributedLayout(DistributedLayout):
         )
 
     def mangle(self) -> str:
-        cga_layout = "_".join("~".join(map(str, vec)) for vec in self.cga_layout) if self.cga_layout else ""
+        cga_layout = (
+            "_".join("~".join(map(str, vec)) for vec in self.cga_layout)
+            if self.cga_layout
+            else ""
+        )
         return f"MMA_{self.version}_{self.warps_per_cta}_{self.instr_shape}_{cga_layout}_MMA"
 
     def __hash__(self):
-        return hash((tuple(self.version), tuple(self.warps_per_cta), tuple(self.instr_shape),
-                     tuple(tuple(vec) for vec in self.cga_layout)))
+        return hash(
+            (
+                tuple(self.version),
+                tuple(self.warps_per_cta),
+                tuple(self.instr_shape),
+                tuple(tuple(vec) for vec in self.cga_layout),
+            )
+        )
 
     @property
     def rank(self):
@@ -332,7 +373,9 @@ def _get_shape_per_cta(shape, cga_layout):
     for i in range(rank):
         cga_shape[i] *= 2
     for dim in range(rank):
-        assert shape_per_cta[dim] % cga_shape[dim] == 0, f"Shape {shape} is not divisible by CGA layout {cga_layout}"
+        assert shape_per_cta[dim] % cga_shape[dim] == 0, (
+            f"Shape {shape} is not divisible by CGA layout {cga_layout}"
+        )
         shape_per_cta[dim] //= cga_shape[dim]
     return shape_per_cta
 
@@ -350,6 +393,7 @@ class NVMMASharedLayout(SharedLayout):
         fp4_padded (bool): Whether FP4 padding is used.
         cga_layout (Optional[List[List[int]]]): Bases describing CTA tiling.
     """
+
     swizzle_byte_width: int
     element_bitwidth: int
     rank: int = 2
@@ -358,8 +402,12 @@ class NVMMASharedLayout(SharedLayout):
     cga_layout: List[List[int]] = field(default_factory=list)
 
     def __post_init__(self):
-        super().__setattr__("swizzle_byte_width", _unwrap_if_constexpr(self.swizzle_byte_width))
-        super().__setattr__("element_bitwidth", _unwrap_if_constexpr(self.element_bitwidth))
+        super().__setattr__(
+            "swizzle_byte_width", _unwrap_if_constexpr(self.swizzle_byte_width)
+        )
+        super().__setattr__(
+            "element_bitwidth", _unwrap_if_constexpr(self.element_bitwidth)
+        )
         super().__setattr__("transposed", _unwrap_if_constexpr(self.transposed))
         super().__setattr__("fp4_padded", _unwrap_if_constexpr(self.fp4_padded))
 
@@ -386,14 +434,20 @@ class NVMMASharedLayout(SharedLayout):
 
     @staticmethod
     @constexpr_function
-    def get_default_for(block_shape, dtype, transposed=False, fp4_padded=False, cga_layout=None):
+    def get_default_for(
+        block_shape, dtype, transposed=False, fp4_padded=False, cga_layout=None
+    ):
         """Returns an NVMMASharedLayout with default swizzling for a given shape.
 
         This picks the largest swizzle pattern compatible with the shape, which
         allows emitting the fewest TMA or MMA messages.
         """
         packing_factor = 2 if fp4_padded else 1
-        shape_per_cta = block_shape if cga_layout is None else _get_shape_per_cta(block_shape, cga_layout)
+        shape_per_cta = (
+            block_shape
+            if cga_layout is None
+            else _get_shape_per_cta(block_shape, cga_layout)
+        )
         rank = len(block_shape)
         if transposed:
             shape_per_cta = shape_per_cta[1:] + shape_per_cta[:1]
@@ -424,12 +478,26 @@ class NVMMASharedLayout(SharedLayout):
         )
 
     def mangle(self) -> str:
-        cga_layout = "_".join("~".join(map(str, vec)) for vec in self.cga_layout) if self.cga_layout else ""
+        cga_layout = (
+            "_".join("~".join(map(str, vec)) for vec in self.cga_layout)
+            if self.cga_layout
+            else ""
+        )
         return f"NVMMA_{self.swizzle_byte_width}_{self.element_bitwidth}_{self.transposed}_{self.fp4_padded}_{cga_layout}_NVMMA"
 
     def __hash__(self):
-        return hash((self.swizzle_byte_width, self.element_bitwidth, self.rank, self.transposed, self.fp4_padded,
-                     tuple(tuple(vec) for vec in self.cga_layout) if self.cga_layout else None))
+        return hash(
+            (
+                self.swizzle_byte_width,
+                self.element_bitwidth,
+                self.rank,
+                self.transposed,
+                self.fp4_padded,
+                tuple(tuple(vec) for vec in self.cga_layout)
+                if self.cga_layout
+                else None,
+            )
+        )
 
 
 @dataclass(frozen=True, eq=True)
@@ -444,6 +512,7 @@ class SwizzledSharedLayout(SharedLayout):
         order (List[int]): Dimension ordering for swizzling.
         cga_layout (Optional[List[List[int]]]): Bases describing CTA tiling.
     """
+
     vec: int
     per_phase: int
     max_phase: int
@@ -473,12 +542,23 @@ class SwizzledSharedLayout(SharedLayout):
                 return ""
             return "_".join(map(str, x))
 
-        cga_layout = "_".join("~".join(map(str, vec)) for vec in self.cga_layout) if self.cga_layout else ""
+        cga_layout = (
+            "_".join("~".join(map(str, vec)) for vec in self.cga_layout)
+            if self.cga_layout
+            else ""
+        )
         return f"SSS_{self.vec}_{self.per_phase}_{self.max_phase}_{stringify(self.order)}_{cga_layout}_SSS"
 
     def __hash__(self):
         return hash(
-            (self.vec, self.per_phase, self.max_phase, tuple(self.order), tuple(tuple(vec) for vec in self.cga_layout)))
+            (
+                self.vec,
+                self.per_phase,
+                self.max_phase,
+                tuple(self.order),
+                tuple(tuple(vec) for vec in self.cga_layout),
+            )
+        )
 
 
 @dataclass(frozen=True, eq=True)
@@ -540,13 +620,16 @@ class PaddedSharedLayout(SharedLayout):
         block_bases (List[List[int]]): Bases for block-level shared memory offsets.
         shape (List[int]): n-D logical shared memory shape
     """
+
     interval_padding_pairs: List[List[int]]
     offset_bases: List[List[int]]
     block_bases: List[List[int]]
     shape: List[int]
 
     def __post_init__(self):
-        super().__setattr__("interval_padding_pairs", _unwrap_shape(self.interval_padding_pairs))
+        super().__setattr__(
+            "interval_padding_pairs", _unwrap_shape(self.interval_padding_pairs)
+        )
         super().__setattr__("offset_bases", _unwrap_shape(self.offset_bases))
         super().__setattr__("block_bases", _unwrap_shape(self.block_bases))
         super().__setattr__("shape", _unwrap_shape(self.shape))
@@ -562,14 +645,18 @@ class PaddedSharedLayout(SharedLayout):
 
     def _to_ir(self, builder):
         intervals, paddings = zip(*self.interval_padding_pairs)
-        return builder.get_padded_shared_layout(intervals, paddings, self.offset_bases, self.block_bases, self.shape)
+        return builder.get_padded_shared_layout(
+            intervals, paddings, self.offset_bases, self.block_bases, self.shape
+        )
 
     def mangle(self) -> str:
         return f"PaddedShared_{self.interval_padding_pairs}_{self.offset_bases}_{self.block_bases}_{self.shape}_PaddedShared"
 
     def verify(self):
         pairs = self.interval_padding_pairs
-        assert len(pairs) > 0, "PaddedSharedLayout interval_padding_pairs must have at least one interval-padding pair"
+        assert len(pairs) > 0, (
+            "PaddedSharedLayout interval_padding_pairs must have at least one interval-padding pair"
+        )
         assert all(len(pair) == 2 for pair in pairs)
         intervals, paddings = zip(*pairs)
 
@@ -577,8 +664,12 @@ class PaddedSharedLayout(SharedLayout):
         assert len(unique_intervals) == len(intervals)
 
         is_power_of_2 = lambda n: n > 0 and n & (n - 1) == 0
-        assert all(is_power_of_2(n) for n in intervals), "PaddedSharedLayout interval values must all be power of two"
-        assert all(is_power_of_2(n) for n in paddings), "PaddedSharedLayout padding values must all be power of two"
+        assert all(is_power_of_2(n) for n in intervals), (
+            "PaddedSharedLayout interval values must all be power of two"
+        )
+        assert all(is_power_of_2(n) for n in paddings), (
+            "PaddedSharedLayout padding values must all be power of two"
+        )
 
         rank = len(self.shape)
         assert rank > 0, "PaddedSharedLayout order must not be empty"
@@ -586,8 +677,7 @@ class PaddedSharedLayout(SharedLayout):
     @staticmethod
     @constexpr_function
     def with_identity_for(interval_padding_pairs, shape, order):
-        """Returns a PaddedSharedLayout with the given interval and padding pairs and an identity mapping as the linear component for the given shape and order.
-        """
+        """Returns a PaddedSharedLayout with the given interval and padding pairs and an identity mapping as the linear component for the given shape and order."""
         assert len(shape) == len(order)
         is_power_of_2 = lambda n: n > 0 and n & (n - 1) == 0
         assert all(is_power_of_2(n) for n in shape)
@@ -597,13 +687,21 @@ class PaddedSharedLayout(SharedLayout):
         offset_bases = []
         for dim in order:
             for basis in range(int(math.log2(shape[dim]))):
-                offset_bases.append([1 << basis if i == dim else 0 for i in range(rank)])
+                offset_bases.append(
+                    [1 << basis if i == dim else 0 for i in range(rank)]
+                )
 
         return PaddedSharedLayout(interval_padding_pairs, offset_bases, [], shape)
 
     def __hash__(self):
-        return hash((tuple(map(tuple, self.interval_padding_pairs)), tuple(map(tuple, self.offset_bases)),
-                     tuple(map(tuple, self.block_bases)), tuple(self.shape)))
+        return hash(
+            (
+                tuple(map(tuple, self.interval_padding_pairs)),
+                tuple(map(tuple, self.offset_bases)),
+                tuple(map(tuple, self.block_bases)),
+                tuple(self.shape),
+            )
+        )
 
 
 @dataclass(frozen=True)
@@ -619,18 +717,23 @@ class SharedLinearLayout(SharedLayout):
         super().__setattr__("block_bases", _unwrap_shape(self.block_bases))
         super().__setattr__("alignment", _unwrap_if_constexpr(self.alignment))
 
-        assert len(self.offset_bases) != 0, "SharedLinearLayout offset_bases must not be empty"
+        assert len(self.offset_bases) != 0, (
+            "SharedLinearLayout offset_bases must not be empty"
+        )
         rank = len(self.offset_bases[0])
         assert rank > 0, "SharedLinearLayout offset_bases must not be empty"
         for basis in self.offset_bases:
             assert len(basis) == rank
         for basis in self.block_bases:
             assert len(basis) == rank
-        assert self.alignment > 0 and (self.alignment & (self.alignment - 1)) == 0, \
+        assert self.alignment > 0 and (self.alignment & (self.alignment - 1)) == 0, (
             "SharedLinearLayout alignment must be a positive power of two"
+        )
 
     def _to_ir(self, builder):
-        return builder.get_shared_linear_layout(self.offset_bases, self.block_bases, self.alignment)
+        return builder.get_shared_linear_layout(
+            self.offset_bases, self.block_bases, self.alignment
+        )
 
     def mangle(self) -> str:
         return f"SharedLinear_{self.offset_bases}_{self.block_bases}_{self.alignment}_SharedLinear"
@@ -645,11 +748,13 @@ class SharedLinearLayout(SharedLayout):
         return [2 * s for s in max_stride]
 
     def __hash__(self):
-        return hash((
-            tuple(map(tuple, self.offset_bases)),
-            tuple(map(tuple, self.block_bases)),
-            self.alignment,
-        ))
+        return hash(
+            (
+                tuple(map(tuple, self.offset_bases)),
+                tuple(map(tuple, self.block_bases)),
+                self.alignment,
+            )
+        )
 
 
 # Python impl of LinearEncodingAttr::basesPerDim

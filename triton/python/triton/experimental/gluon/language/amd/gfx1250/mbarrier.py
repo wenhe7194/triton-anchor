@@ -14,7 +14,9 @@ class MBarrierLayout(SwizzledSharedLayout):
     """
 
     def __init__(self, cga_layout=None):
-        super().__init__(vec=1, per_phase=1, max_phase=1, order=[0], cga_layout=cga_layout or [])
+        super().__init__(
+            vec=1, per_phase=1, max_phase=1, order=[0], cga_layout=cga_layout or []
+        )
 
 
 @builtin

@@ -5,6 +5,7 @@ Builds the embedded spine-triton frontend/core as libtriton.so plus
 triton-shared-opt, then packages it together with the triton_anchor Python
 orchestration layer.
 """
+
 import os
 import re
 import shutil
@@ -49,7 +50,12 @@ def parse_cmake_cache(cache_path: Path) -> dict[str, str]:
     if not cache_path.exists():
         return values
     for line in cache_path.read_text().splitlines():
-        if not line or line.startswith(("//", "#")) or "=" not in line or ":" not in line:
+        if (
+            not line
+            or line.startswith(("//", "#"))
+            or "=" not in line
+            or ":" not in line
+        ):
             continue
         key_type, value = line.split("=", 1)
         key, _type = key_type.split(":", 1)
@@ -71,7 +77,9 @@ def discover_llvm_config() -> tuple[str, str]:
         llvm_dir = llvm_dir or str((llvm_build / "lib" / "cmake" / "llvm").resolve())
         mlir_dir = mlir_dir or str((llvm_build / "lib" / "cmake" / "mlir").resolve())
 
-    llvm_library_dir = os.environ.get("LLVM_LIBRARY_DIR") or os.environ.get("LLVM_SYSPATH")
+    llvm_library_dir = os.environ.get("LLVM_LIBRARY_DIR") or os.environ.get(
+        "LLVM_SYSPATH"
+    )
     if llvm_library_dir:
         llvm_lib = Path(llvm_library_dir)
         if (llvm_lib / "lib").exists():
@@ -79,7 +87,9 @@ def discover_llvm_config() -> tuple[str, str]:
         llvm_dir = llvm_dir or str((llvm_lib / "cmake" / "llvm").resolve())
         mlir_dir = mlir_dir or str((llvm_lib / "cmake" / "mlir").resolve())
 
-    cache_values = parse_cmake_cache(BASE_DIR / "build" / "cmake-wheel" / "CMakeCache.txt")
+    cache_values = parse_cmake_cache(
+        BASE_DIR / "build" / "cmake-wheel" / "CMakeCache.txt"
+    )
     llvm_dir = llvm_dir or cache_values.get("LLVM_DIR")
     mlir_dir = mlir_dir or cache_values.get("MLIR_DIR")
 
@@ -143,7 +153,9 @@ class CMakeBuild(build_ext):
         try:
             subprocess.check_output(["cmake", "--version"])
         except OSError as exc:
-            raise RuntimeError("CMake must be installed to build triton-anchor") from exc
+            raise RuntimeError(
+                "CMake must be installed to build triton-anchor"
+            ) from exc
         for ext in self.extensions:
             self.build_extension(ext)
 
@@ -154,12 +166,16 @@ class CMakeBuild(build_ext):
         extdir = (Path(self.build_lib) / ext.package_path).resolve()
         package_root = extdir.parent.resolve()
         build_dir = Path(
-            os.environ.get("TRITON_ANCHOR_CMAKE_BUILD_DIR", BASE_DIR / DEFAULT_BUILD_SUBDIR)
+            os.environ.get(
+                "TRITON_ANCHOR_CMAKE_BUILD_DIR", BASE_DIR / DEFAULT_BUILD_SUBDIR
+            )
         ).resolve()
         build_dir.mkdir(parents=True, exist_ok=True)
 
         llvm_dir, mlir_dir = discover_llvm_config()
-        python_include = sysconfig.get_path("platinclude") or sysconfig.get_path("include")
+        python_include = sysconfig.get_path("platinclude") or sysconfig.get_path(
+            "include"
+        )
         pybind11_dir = os.environ.get("pybind11_DIR", pybind11.get_cmake_dir())
 
         cmake_args = [
@@ -178,7 +194,9 @@ class CMakeBuild(build_ext):
             cmake_args = ["-G", "Ninja", f"-DCMAKE_MAKE_PROGRAM={ninja}"] + cmake_args
 
         env = os.environ.copy()
-        subprocess.check_call(["cmake", str(BASE_DIR)] + cmake_args, cwd=build_dir, env=env)
+        subprocess.check_call(
+            ["cmake", str(BASE_DIR)] + cmake_args, cwd=build_dir, env=env
+        )
 
         build_args = ["--build", ".", "--target", *CMAKE_BUILD_TARGETS]
         max_jobs = os.environ.get("MAX_JOBS")
@@ -198,7 +216,9 @@ class CMakeBuild(build_ext):
 
         triton_shared_opt_src = get_triton_shared_opt_build_path(build_dir)
         if not triton_shared_opt_src.exists():
-            raise RuntimeError(f"missing built triton-shared-opt at {triton_shared_opt_src}")
+            raise RuntimeError(
+                f"missing built triton-shared-opt at {triton_shared_opt_src}"
+            )
         triton_shared_opt_dst = package_root / "bin" / "triton-shared-opt"
         ensure_copy(triton_shared_opt_src, triton_shared_opt_dst, executable=True)
         outputs.append(str(triton_shared_opt_dst))
@@ -216,7 +236,9 @@ setup(
     package_dir={"": "python", "triton": "triton/python/triton"},
     packages=(
         find_namespace_packages(where="triton/python", include=["triton", "triton.*"])
-        + find_namespace_packages(where="python", include=["triton_anchor", "triton_anchor.*"])
+        + find_namespace_packages(
+            where="python", include=["triton_anchor", "triton_anchor.*"]
+        )
     ),
     install_requires=["filelock"],
     package_data={

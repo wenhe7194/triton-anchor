@@ -1,5 +1,7 @@
 from triton.runtime.jit import constexpr_function
-from triton._C.libtriton.gluon_ir import get_amd_mfma_scale_layout as _get_mfma_scale_layout
+from triton._C.libtriton.gluon_ir import (
+    get_amd_mfma_scale_layout as _get_mfma_scale_layout,
+)
 
 from ..._core import builtin
 from ..._layouts import DotOperandLayout
@@ -37,16 +39,34 @@ def mfma_scaled(a, a_scale, a_format, b, b_scale, b_format, acc, _semantic=None)
         acc (tensor): Accumulator tensor.
     """
     layout = acc.type.layout
-    assert isinstance(layout, AMDMFMALayout), "Expected layout to be an instance of AMDMFMALayout"
-    assert (isinstance(a.type.layout, DotOperandLayout) and a.type.layout.parent== layout), \
-            "Expected lhs layout to be a DotOperandLayout with parent matching MFMA layout"
-    assert (isinstance(b.type.layout, DotOperandLayout) and b.type.layout.parent == layout), \
-            "Expected rhs layout to be a DotOperandLayout with parent matching MFMA layout"
+    assert isinstance(layout, AMDMFMALayout), (
+        "Expected layout to be an instance of AMDMFMALayout"
+    )
+    assert (
+        isinstance(a.type.layout, DotOperandLayout) and a.type.layout.parent == layout
+    ), "Expected lhs layout to be a DotOperandLayout with parent matching MFMA layout"
+    assert (
+        isinstance(b.type.layout, DotOperandLayout) and b.type.layout.parent == layout
+    ), "Expected rhs layout to be a DotOperandLayout with parent matching MFMA layout"
 
-    assert a_format.value in {"e2m1", "e4m3", "e5m2"}, f"Unsupported lhs_format: {a_format.value}"
-    assert b_format.value in {"e2m1", "e4m3", "e5m2"}, f"Unsupported rhs_format: {b_format.value}"
+    assert a_format.value in {"e2m1", "e4m3", "e5m2"}, (
+        f"Unsupported lhs_format: {a_format.value}"
+    )
+    assert b_format.value in {"e2m1", "e4m3", "e5m2"}, (
+        f"Unsupported rhs_format: {b_format.value}"
+    )
 
-    return _mma_scaled(a, a_scale, a_format, b, b_scale, b_format, acc, get_mfma_scale_layout, _semantic)
+    return _mma_scaled(
+        a,
+        a_scale,
+        a_format,
+        b,
+        b_scale,
+        b_format,
+        acc,
+        get_mfma_scale_layout,
+        _semantic,
+    )
 
 
 def _get_mfma_scale_layout_impl(*args, **kwargs):
@@ -58,7 +78,7 @@ _get_mfma_scale_layout_impl.__triton_builtin__ = True
 
 @constexpr_function
 def get_mfma_scale_layout(dot_operand_layout, shape):
-    """ Get the scale layout for MFMA scaled operands.
+    """Get the scale layout for MFMA scaled operands.
 
     Args:
         dot_operand_layout (DotOperandLayout): The dot operand layout.
@@ -69,11 +89,15 @@ def get_mfma_scale_layout(dot_operand_layout, shape):
     """
     op_idx = dot_operand_layout.operand_index
     parent = dot_operand_layout.parent
-    assert isinstance(parent, AMDMFMALayout), "Expected parent to be an instance of AMDMFMALayout"
+    assert isinstance(parent, AMDMFMALayout), (
+        "Expected parent to be an instance of AMDMFMALayout"
+    )
     mdim = parent.instr_shape[0]
     tiles_per_warp = parent.tiles_per_warp
     warps_per_cta = parent.warps_per_cta
-    return _get_mfma_scale_layout_impl(op_idx, shape, mdim, tiles_per_warp, warps_per_cta)
+    return _get_mfma_scale_layout_impl(
+        op_idx, shape, mdim, tiles_per_warp, warps_per_cta
+    )
 
 
 """
@@ -83,48 +107,125 @@ The cdna4 version additionally supports `fadd` with `bf16`.
 
 
 @builtin
-def buffer_atomic_max(ptr, offsets, value, mask=None, sem=None, scope=None, _semantic=None):
-    return _buffer_atomic_rmw_impl('max', ptr, offsets, value, "cdna4", mask=mask, sem=sem, scope=scope,
-                                   _semantic=_semantic)
+def buffer_atomic_max(
+    ptr, offsets, value, mask=None, sem=None, scope=None, _semantic=None
+):
+    return _buffer_atomic_rmw_impl(
+        "max",
+        ptr,
+        offsets,
+        value,
+        "cdna4",
+        mask=mask,
+        sem=sem,
+        scope=scope,
+        _semantic=_semantic,
+    )
 
 
 @builtin
-def buffer_atomic_min(ptr, offsets, value, mask=None, sem=None, scope=None, _semantic=None):
+def buffer_atomic_min(
+    ptr, offsets, value, mask=None, sem=None, scope=None, _semantic=None
+):
 
-    return _buffer_atomic_rmw_impl('min', ptr, offsets, value, "cdna4", mask=mask, sem=sem, scope=scope,
-                                   _semantic=_semantic)
-
-
-@builtin
-def buffer_atomic_add(ptr, offsets, value, mask=None, sem=None, scope=None, _semantic=None):
-
-    return _buffer_atomic_rmw_impl('add', ptr, offsets, value, "cdna4", mask=mask, sem=sem, scope=scope,
-                                   _semantic=_semantic)
-
-
-@builtin
-def buffer_atomic_and(ptr, offsets, value, mask=None, sem=None, scope=None, _semantic=None):
-
-    return _buffer_atomic_rmw_impl('and', ptr, offsets, value, "cdna4", mask=mask, sem=sem, scope=scope,
-                                   _semantic=_semantic)
+    return _buffer_atomic_rmw_impl(
+        "min",
+        ptr,
+        offsets,
+        value,
+        "cdna4",
+        mask=mask,
+        sem=sem,
+        scope=scope,
+        _semantic=_semantic,
+    )
 
 
 @builtin
-def buffer_atomic_or(ptr, offsets, value, mask=None, sem=None, scope=None, _semantic=None):
+def buffer_atomic_add(
+    ptr, offsets, value, mask=None, sem=None, scope=None, _semantic=None
+):
 
-    return _buffer_atomic_rmw_impl('or', ptr, offsets, value, "cdna4", mask=mask, sem=sem, scope=scope,
-                                   _semantic=_semantic)
+    return _buffer_atomic_rmw_impl(
+        "add",
+        ptr,
+        offsets,
+        value,
+        "cdna4",
+        mask=mask,
+        sem=sem,
+        scope=scope,
+        _semantic=_semantic,
+    )
 
 
 @builtin
-def buffer_atomic_xor(ptr, offsets, value, mask=None, sem=None, scope=None, _semantic=None):
+def buffer_atomic_and(
+    ptr, offsets, value, mask=None, sem=None, scope=None, _semantic=None
+):
 
-    return _buffer_atomic_rmw_impl('xor', ptr, offsets, value, "cdna4", mask=mask, sem=sem, scope=scope,
-                                   _semantic=_semantic)
+    return _buffer_atomic_rmw_impl(
+        "and",
+        ptr,
+        offsets,
+        value,
+        "cdna4",
+        mask=mask,
+        sem=sem,
+        scope=scope,
+        _semantic=_semantic,
+    )
 
 
 @builtin
-def buffer_atomic_xchg(ptr, offsets, value, mask=None, sem=None, scope=None, _semantic=None):
+def buffer_atomic_or(
+    ptr, offsets, value, mask=None, sem=None, scope=None, _semantic=None
+):
 
-    return _buffer_atomic_rmw_impl('xchg', ptr, offsets, value, "cdna4", mask=mask, sem=sem, scope=scope,
-                                   _semantic=_semantic)
+    return _buffer_atomic_rmw_impl(
+        "or",
+        ptr,
+        offsets,
+        value,
+        "cdna4",
+        mask=mask,
+        sem=sem,
+        scope=scope,
+        _semantic=_semantic,
+    )
+
+
+@builtin
+def buffer_atomic_xor(
+    ptr, offsets, value, mask=None, sem=None, scope=None, _semantic=None
+):
+
+    return _buffer_atomic_rmw_impl(
+        "xor",
+        ptr,
+        offsets,
+        value,
+        "cdna4",
+        mask=mask,
+        sem=sem,
+        scope=scope,
+        _semantic=_semantic,
+    )
+
+
+@builtin
+def buffer_atomic_xchg(
+    ptr, offsets, value, mask=None, sem=None, scope=None, _semantic=None
+):
+
+    return _buffer_atomic_rmw_impl(
+        "xchg",
+        ptr,
+        offsets,
+        value,
+        "cdna4",
+        mask=mask,
+        sem=sem,
+        scope=scope,
+        _semantic=_semantic,
+    )

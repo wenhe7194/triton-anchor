@@ -132,7 +132,10 @@ def _get_split_shape(shape, axis):
     shape[axis] //= 2
     shape.insert(axis + 1, 2)
     permute = list(range(len(shape)))
-    permute[axis + 1], permute[len(permute) - 1] = permute[len(permute) - 1], permute[axis + 1]
+    permute[axis + 1], permute[len(permute) - 1] = (
+        permute[len(permute) - 1],
+        permute[axis + 1],
+    )
     return ttgl.tuple(shape), ttgl.tuple(permute)
 
 

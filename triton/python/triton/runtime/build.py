@@ -17,12 +17,19 @@ from .cache import get_cache_manager
 from .. import knobs
 
 
-def _build(name: str, src: str, srcdir: str, library_dirs: list[str], include_dirs: list[str], libraries: list[str],
-           ccflags: list[str]) -> str:
+def _build(
+    name: str,
+    src: str,
+    srcdir: str,
+    library_dirs: list[str],
+    include_dirs: list[str],
+    libraries: list[str],
+    ccflags: list[str],
+) -> str:
     if impl := knobs.build.impl:
         return impl(name, src, srcdir, library_dirs, include_dirs, libraries)
-    suffix = sysconfig.get_config_var('EXT_SUFFIX')
-    so = os.path.join(srcdir, '{name}{suffix}'.format(name=name, suffix=suffix))
+    suffix = sysconfig.get_config_var("EXT_SUFFIX")
+    so = os.path.join(srcdir, "{name}{suffix}".format(name=name, suffix=suffix))
     cc = os.environ.get("CC")
     if cc is None:
         clang = shutil.which("clang")
@@ -30,12 +37,13 @@ def _build(name: str, src: str, srcdir: str, library_dirs: list[str], include_di
         cc = gcc if gcc is not None else clang
         if cc is None:
             raise RuntimeError(
-                "Failed to find C compiler. Please specify via CC environment variable or set triton.knobs.build.impl.")
+                "Failed to find C compiler. Please specify via CC environment variable or set triton.knobs.build.impl."
+            )
     scheme = sysconfig.get_default_scheme()
     # 'posix_local' is a custom scheme on Debian. However, starting Python 3.10, the default install
     # path changes to include 'local'. This change is required to use triton with system-wide python.
-    if scheme == 'posix_local':
-        scheme = 'posix_prefix'
+    if scheme == "posix_local":
+        scheme = "posix_prefix"
     py_include_dir = sysconfig.get_paths(scheme=scheme)["include"]
     custom_backend_dirs = knobs.build.backend_dirs
     include_dirs = include_dirs + [srcdir, py_include_dir, *custom_backend_dirs]
@@ -51,7 +59,7 @@ def _build(name: str, src: str, srcdir: str, library_dirs: list[str], include_di
 
 def _library_flag(lib: str) -> str:
     # Match .so files with optional version numbers (e.g., .so, .so.1, .so.513.50.1)
-    if re.search(r'\.so(\.\d+)*$', lib) or lib.endswith(".a"):
+    if re.search(r"\.so(\.\d+)*$", lib) or lib.endswith(".a"):
         return f"-l:{lib}"
     return f"-l{lib}"
 
@@ -59,6 +67,7 @@ def _library_flag(lib: str) -> str:
 @functools.lru_cache
 def platform_key() -> str:
     from platform import machine, system, architecture
+
     return ",".join([machine(), system(), *architecture()])
 
 
@@ -71,9 +80,14 @@ def _load_module_from_path(name: str, path: str) -> ModuleType:
     return mod
 
 
-def compile_module_from_src(src: str, name: str, library_dirs: list[str] | None = None,
-                            include_dirs: list[str] | None = None, libraries: list[str] | None = None,
-                            ccflags: list[str] | None = None) -> ModuleType:
+def compile_module_from_src(
+    src: str,
+    name: str,
+    library_dirs: list[str] | None = None,
+    include_dirs: list[str] | None = None,
+    libraries: list[str] | None = None,
+    ccflags: list[str] | None = None,
+) -> ModuleType:
     key = hashlib.sha256((src + platform_key()).encode("utf-8")).hexdigest()
     cache = get_cache_manager(key)
     suffix = sysconfig.get_config_var("EXT_SUFFIX")
@@ -84,13 +98,23 @@ def compile_module_from_src(src: str, name: str, library_dirs: list[str] | None 
             return _load_module_from_path(name, cache_path)
         except (RuntimeError, ImportError):
             log = logging.getLogger(__name__)
-            log.warning(f"Triton cache error: compiled module {name}.so could not be loaded")
+            log.warning(
+                f"Triton cache error: compiled module {name}.so could not be loaded"
+            )
 
     with tempfile.TemporaryDirectory() as tmpdir:
         src_path = os.path.join(tmpdir, name + ".c")
         with open(src_path, "w") as f:
             f.write(src)
-        so = _build(name, src_path, tmpdir, library_dirs or [], include_dirs or [], libraries or [], ccflags or [])
+        so = _build(
+            name,
+            src_path,
+            tmpdir,
+            library_dirs or [],
+            include_dirs or [],
+            libraries or [],
+            ccflags or [],
+        )
         with open(so, "rb") as f:
             cache_path = cache.put(f.read(), f"{name}{suffix}", binary=True)
 

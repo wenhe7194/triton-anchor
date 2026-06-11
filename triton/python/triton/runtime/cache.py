@@ -12,7 +12,6 @@ from triton import __version__, knobs
 
 
 class CacheManager(ABC):
-
     def __init__(self, key, override=False, dump=False):
         pass
 
@@ -34,7 +33,6 @@ class CacheManager(ABC):
 
 
 class FileCacheManager(CacheManager):
-
     def __init__(self, key, override=False, dump=False):
         self.key = key
         self.lock_path = None
@@ -144,9 +142,9 @@ class RemoteCacheBackend:
 
 
 class RedisRemoteCacheBackend(RemoteCacheBackend):
-
     def __init__(self, key):
         import redis
+
         self._key = key
         self._key_fmt = knobs.cache.redis.key_format
         self._redis = redis.Redis(
@@ -159,20 +157,24 @@ class RedisRemoteCacheBackend(RemoteCacheBackend):
 
     def get(self, filenames: List[str]) -> Dict[str, str]:
         results = self._redis.mget([self._get_key(f) for f in filenames])
-        return {filename: result for filename, result in zip(filenames, results) if result is not None}
+        return {
+            filename: result
+            for filename, result in zip(filenames, results)
+            if result is not None
+        }
 
     def put(self, filename: str, data: bytes) -> Dict[str, bytes]:
         self._redis.set(self._get_key(filename), data)
 
 
 class RemoteCacheManager(CacheManager):
-
     def __init__(self, key, override=False, dump=False):
         # Setup backend pointed too by `TRITON_REMOTE_CACHE_BACKEND`.
         remote_cache_cls = knobs.cache.remote_manager_class
         if not remote_cache_cls:
             raise RuntimeError(
-                "Unable to instantiate RemoteCacheManager, TRITON_REMOTE_CACHE_BACKEND doesn't point to a valid class")
+                "Unable to instantiate RemoteCacheManager, TRITON_REMOTE_CACHE_BACKEND doesn't point to a valid class"
+            )
         self._backend = remote_cache_cls(key)
 
         self._override = override
@@ -196,7 +198,7 @@ class RemoteCacheManager(CacheManager):
         results = self._backend.get([filename])
         if len(results) == 0:
             return None
-        (_, data), = results.items()
+        ((_, data),) = results.items()
         return self._materialize(filename, data)
 
     def put(self, data, filename: str, binary=True) -> str:
@@ -268,7 +270,7 @@ def get_dump_manager(key) -> CacheManager:
 
 def make_so_cache_key(version_hash, signature, constants, ids, **kwargs):
     # Get unique key for the compiled code
-    signature = {k: 'ptr' if v[0] == '*' else v for k, v in signature.items()}
+    signature = {k: "ptr" if v[0] == "*" else v for k, v in signature.items()}
     key = f"{version_hash}-{''.join(signature.values())}-{constants}-{ids}"
     for kw in kwargs:
         key = f"{key}-{kwargs.get(kw)}"
@@ -279,6 +281,7 @@ def make_so_cache_key(version_hash, signature, constants, ids, **kwargs):
 @functools.lru_cache()
 def triton_key():
     import pkgutil
+
     TRITON_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     contents = []
     # frontend
@@ -305,11 +308,11 @@ def triton_key():
             libtriton_hash.update(chunk)
     contents.append(libtriton_hash.hexdigest())
     # language
-    language_path = os.path.join(TRITON_PATH, 'language')
+    language_path = os.path.join(TRITON_PATH, "language")
     for lib in pkgutil.walk_packages([language_path], prefix="triton.language."):
         with open(lib.module_finder.find_spec(lib.name).origin, "rb") as f:
             contents += [hashlib.sha256(f.read()).hexdigest()]
-    return f'{__version__}' + '-'.join(contents)
+    return f"{__version__}" + "-".join(contents)
 
 
 def get_cache_key(src, backend, backend_options, env_vars):

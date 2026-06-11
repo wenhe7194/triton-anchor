@@ -336,7 +336,13 @@ def test_ttir_generation():
     ir.load_dialects(ctx)
     libtriton.spine_triton.load_dialects(ctx)
 
-    ttir_module = src.make_ir(target=None, options=_MinimalOptions(), codegen_fns=None, module_map={}, context=ctx)
+    ttir_module = src.make_ir(
+        target=None,
+        options=_MinimalOptions(),
+        codegen_fns=None,
+        module_map={},
+        context=ctx,
+    )
     ir_text = str(ttir_module)
 
     assert "tt.func" in ir_text or "func.func" in ir_text, "TTIR 中应包含函数定义"

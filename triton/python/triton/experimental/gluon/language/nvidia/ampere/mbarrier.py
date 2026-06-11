@@ -13,7 +13,9 @@ class MBarrierLayout(SwizzledSharedLayout):
     """
 
     def __init__(self, cga_layout=None):
-        super().__init__(vec=1, per_phase=1, max_phase=1, order=[0], cga_layout=cga_layout or [])
+        super().__init__(
+            vec=1, per_phase=1, max_phase=1, order=[0], cga_layout=cga_layout or []
+        )
 
 
 @builtin
@@ -54,7 +56,9 @@ def wait(mbarrier, phase, pred=True, deps=(), _semantic=None):
     phase = _semantic.to_tensor(phase)
     pred = _semantic.to_tensor(pred)
     deps = [x.handle for x in deps]
-    _semantic.builder.create_mbarrier_wait(mbarrier.handle, phase.handle, pred.handle, deps)
+    _semantic.builder.create_mbarrier_wait(
+        mbarrier.handle, phase.handle, pred.handle, deps
+    )
 
 
 @builtin

@@ -34,8 +34,15 @@ class parallel(range):
     :param bind_sub_block: Tells the compiler if multiple tensor cores participate in the loop.
     """
 
-    def __init__(self, arg1, arg2=None, step=None, num_stages=None, loop_unroll_factor=None,
-                 bind_sub_block: bool = True):
+    def __init__(
+        self,
+        arg1,
+        arg2=None,
+        step=None,
+        num_stages=None,
+        loop_unroll_factor=None,
+        bind_sub_block: bool = True,
+    ):
         super().__init__(arg1, arg2, step, num_stages, loop_unroll_factor)
         self.bind_sub_block = bind_sub_block
 
@@ -64,7 +71,9 @@ def descriptor_load(base, offsets, destination=None, _semantic=None):
     if destination is None:
         return smt_semantic.descriptor_load(base, offsets, _semantic)
 
-    return smt_semantic.descriptor_load_to_destination(base, offsets, destination, _semantic)
+    return smt_semantic.descriptor_load_to_destination(
+        base, offsets, destination, _semantic
+    )
 
 
 @builtin
@@ -127,8 +136,13 @@ def dot(a_packed, b_packed, out_unpacked=None, _semantic=None):
 
 
 @builtin
-def mbarrier(flag=tl.constexpr(0), arrive_count=tl.constexpr(0), transaction_count=tl.constexpr(0),
-             expect_count=tl.constexpr(1), _semantic=None):
+def mbarrier(
+    flag=tl.constexpr(0),
+    arrive_count=tl.constexpr(0),
+    transaction_count=tl.constexpr(0),
+    expect_count=tl.constexpr(1),
+    _semantic=None,
+):
     """Initialize a memory barrier for thread synchronization.
 
     :param flag: Barrier mode flag (0=normal, 1=async, 2=with fence)
@@ -139,7 +153,9 @@ def mbarrier(flag=tl.constexpr(0), arrive_count=tl.constexpr(0), transaction_cou
     Example:
         bar = smt.mbarrier(flag=0, arrive_count=0, transaction_count=0, expect_count=1)
     """
-    return smt_semantic.mbarrier(flag, arrive_count, transaction_count, expect_count, _semantic)
+    return smt_semantic.mbarrier(
+        flag, arrive_count, transaction_count, expect_count, _semantic
+    )
 
 
 @builtin
@@ -149,7 +165,9 @@ def barrier_arrive(bar, _semantic=None):
 
 
 @builtin
-def barrier_wait(bar, flag=tl.constexpr(0), arrive_count=tl.constexpr(0), _semantic=None):
+def barrier_wait(
+    bar, flag=tl.constexpr(0), arrive_count=tl.constexpr(0), _semantic=None
+):
     """Wait for barrier to reach expected version."""
     return smt_semantic.barrier_wait(bar, flag, arrive_count, _semantic)
 
@@ -171,12 +189,14 @@ def barrier_set_expect(bar, expect_count=tl.constexpr(1), _semantic=None):
 
 @builtin
 def mbarrier_copies(
-        flag=tl.constexpr(0),
-        arrive_count=tl.constexpr(0),
-        transaction_count=tl.constexpr(0),
-        expect_count=tl.constexpr(1),
-        copies=1,
-        _semantic=None,
+    flag=tl.constexpr(0),
+    arrive_count=tl.constexpr(0),
+    transaction_count=tl.constexpr(0),
+    expect_count=tl.constexpr(1),
+    copies=1,
+    _semantic=None,
 ):
 
-    return smt_semantic.mbarrier_copies(flag, arrive_count, transaction_count, expect_count, copies, _semantic)
+    return smt_semantic.mbarrier_copies(
+        flag, arrive_count, transaction_count, expect_count, copies, _semantic
+    )

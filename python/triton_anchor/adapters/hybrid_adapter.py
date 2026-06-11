@@ -20,7 +20,9 @@ class HybridAdapter(ILinalgOptAdapter):
         return "hybrid"
 
     def convert(self, ttir_module: Any, metadata: dict, context: Any = None) -> Any:
-        return TritonSharedAdapter(mode="unstructured").convert(ttir_module, metadata, context)
+        return TritonSharedAdapter(mode="unstructured").convert(
+            ttir_module, metadata, context
+        )
 
     def get_output_dialects(self) -> List[str]:
         return TritonSharedAdapter(mode="unstructured").get_output_dialects()

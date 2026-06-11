@@ -13,9 +13,11 @@ import importlib
 import importlib.util
 import copy
 
-GLUON_IMPORT_LINES = ("from triton.experimental import gluon\n"
-                      "from triton.experimental.gluon import language as ttgl\n"
-                      "from triton.tools.triton_to_gluon_translater.translator_helpers import *\n")
+GLUON_IMPORT_LINES = (
+    "from triton.experimental import gluon\n"
+    "from triton.experimental.gluon import language as ttgl\n"
+    "from triton.tools.triton_to_gluon_translater.translator_helpers import *\n"
+)
 
 
 class TritonToGluonTransformer(ast.NodeTransformer):
@@ -25,7 +27,14 @@ class TritonToGluonTransformer(ast.NodeTransformer):
     and records nested JIT callables to be converted and appended to the output.
     """
 
-    def __init__(self, globals_map: dict, shared_jit_set: set, shared_queue: list, is_jit, constexpr_globals: dict):
+    def __init__(
+        self,
+        globals_map: dict,
+        shared_jit_set: set,
+        shared_queue: list,
+        is_jit,
+        constexpr_globals: dict,
+    ):
         super().__init__()
         # Resolution scope (globals ∪ nonlocals)
         self.scope: dict = globals_map or {}
@@ -45,7 +54,9 @@ class TritonToGluonTransformer(ast.NodeTransformer):
         # Build ttgl.constexpr
         return self.ttgl_attr("constexpr")
 
-    def maybe_rewrite_constexpr_annotation(self, ann: Optional[ast.expr]) -> Optional[ast.expr]:
+    def maybe_rewrite_constexpr_annotation(
+        self, ann: Optional[ast.expr]
+    ) -> Optional[ast.expr]:
         if ann is None:
             return None
         if self.is_triton_constexpr_annotation(ann):
@@ -53,7 +64,9 @@ class TritonToGluonTransformer(ast.NodeTransformer):
         return ann
 
     def ttgl_attr(self, name: str) -> ast.AST:
-        return ast.Attribute(value=ast.Name(id="ttgl", ctx=ast.Load()), attr=name, ctx=ast.Load())
+        return ast.Attribute(
+            value=ast.Name(id="ttgl", ctx=ast.Load()), attr=name, ctx=ast.Load()
+        )
 
     def resolve_value(self, expr: ast.expr):
         if isinstance(expr, ast.Name):
@@ -66,18 +79,27 @@ class TritonToGluonTransformer(ast.NodeTransformer):
             return getattr(base, expr.attr, None)
         return None
 
-    def forward_call(self, node: ast.Call, target_func: ast.expr, filter_keywords: list[str] = []) -> ast.Call:
+    def forward_call(
+        self, node: ast.Call, target_func: ast.expr, filter_keywords: list[str] = []
+    ) -> ast.Call:
         new_keywords = [kw for kw in node.keywords if kw.arg not in filter_keywords]
-        return ast.Call(func=target_func, args=list(node.args), keywords=list(new_keywords))
+        return ast.Call(
+            func=target_func, args=list(node.args), keywords=list(new_keywords)
+        )
 
     def visit_Call(self, node: ast.Call) -> ast.AST:
         node = self.generic_visit(node)
         resolved_callable = self.resolve_value(node.func)
         if resolved_callable is not None:
-            resolved_callable = triton.language.core._unwrap_if_constexpr(resolved_callable)
+            resolved_callable = triton.language.core._unwrap_if_constexpr(
+                resolved_callable
+            )
             base_function = getattr(resolved_callable, "fn", resolved_callable)
-            function_name = getattr(base_function, "__qualname__", getattr(base_function, "__name__",
-                                                                           str(base_function)))
+            function_name = getattr(
+                base_function,
+                "__qualname__",
+                getattr(base_function, "__name__", str(base_function)),
+            )
             if triton.language.core.is_builtin(resolved_callable):
                 builtin_name = function_name.split(".")[-1]
                 builtin_mapping: dict[str, ast.expr] = {
@@ -86,10 +108,18 @@ class TritonToGluonTransformer(ast.NodeTransformer):
                     "trans": ast.Name(id="tl_trans", ctx=ast.Load()),
                     "dot": ast.Name(id="tl_dot", ctx=ast.Load()),
                     "dot_scaled": ast.Name(id="tl_dot_scaled", ctx=ast.Load()),
-                    "make_tensor_descriptor": ast.Name(id="tl_make_tensor_descriptor", ctx=ast.Load()),
-                    "load_tensor_descriptor": ast.Name(id="tl_load_tensor_descriptor", ctx=ast.Load()),
-                    "store_tensor_descriptor": ast.Name(id="tl_store_tensor_descriptor", ctx=ast.Load()),
-                    "num_threads": ast.Name(id="get_num_threads_per_program", ctx=ast.Load()),
+                    "make_tensor_descriptor": ast.Name(
+                        id="tl_make_tensor_descriptor", ctx=ast.Load()
+                    ),
+                    "load_tensor_descriptor": ast.Name(
+                        id="tl_load_tensor_descriptor", ctx=ast.Load()
+                    ),
+                    "store_tensor_descriptor": ast.Name(
+                        id="tl_store_tensor_descriptor", ctx=ast.Load()
+                    ),
+                    "num_threads": ast.Name(
+                        id="get_num_threads_per_program", ctx=ast.Load()
+                    ),
                 }
                 mapped_target = builtin_mapping.get(builtin_name)
                 if mapped_target is None and hasattr(ttgl, builtin_name):
@@ -104,13 +134,26 @@ class TritonToGluonTransformer(ast.NodeTransformer):
                     # For split, apply on the source argument rather than wrapping destination
                     if builtin_name == "split":
                         source_arg = node.args[0]
-                        wrapped_src = ast.Call(func=ast.Name(id="set_split_src_layout", ctx=ast.Load()),
-                                               args=[source_arg], keywords=[])
+                        wrapped_src = ast.Call(
+                            func=ast.Name(id="set_split_src_layout", ctx=ast.Load()),
+                            args=[source_arg],
+                            keywords=[],
+                        )
                         node.args[0] = ast.copy_location(wrapped_src, source_arg)
                     # For shape/layout changing ops, wrap to reset layout
-                    if builtin_name in {"reshape", "trans", "permute", "join", "reduce", "split"}:
-                        reset_layout_wrapped = ast.Call(func=ast.Name(id="reset_to_default_layout", ctx=ast.Load()),
-                                                        args=[node], keywords=[])
+                    if builtin_name in {
+                        "reshape",
+                        "trans",
+                        "permute",
+                        "join",
+                        "reduce",
+                        "split",
+                    }:
+                        reset_layout_wrapped = ast.Call(
+                            func=ast.Name(id="reset_to_default_layout", ctx=ast.Load()),
+                            args=[node],
+                            keywords=[],
+                        )
                         node = ast.copy_location(reset_layout_wrapped, node)
                     return node
             # Track JITFunction callees
@@ -119,36 +162,65 @@ class TritonToGluonTransformer(ast.NodeTransformer):
                     self.jit_functions.add(resolved_callable)
                     self.queue.append(resolved_callable)
                 # Strip namespace: rewrite to local function name
-                return self.forward_call(node, ast.Name(id=getattr(base_function, "__name__", ""), ctx=ast.Load()))
+                return self.forward_call(
+                    node,
+                    ast.Name(id=getattr(base_function, "__name__", ""), ctx=ast.Load()),
+                )
             if resolved_callable is triton.language.core.range:
                 # skip all keywords except arg1, arg2, and step and replace with range.
                 allowed = {"arg1", "arg2", "step"}
                 new_keywords = [kw for kw in node.keywords if kw.arg in allowed]
                 new_args = list(node.args[:3])
                 return ast.copy_location(
-                    ast.Call(func=ast.Name(id="range", ctx=ast.Load()), args=new_args, keywords=new_keywords),
+                    ast.Call(
+                        func=ast.Name(id="range", ctx=ast.Load()),
+                        args=new_args,
+                        keywords=new_keywords,
+                    ),
                     node,
                 )
             if resolved_callable is triton.language.core.static_range:
                 return self.forward_call(node, self.ttgl_attr("static_range"))
         else:
-            if isinstance(node.func, ast.Attribute) and node.func.attr in ["store", "load", "gather", "scatter"]:
+            if isinstance(node.func, ast.Attribute) and node.func.attr in [
+                "store",
+                "load",
+                "gather",
+                "scatter",
+            ]:
                 helper_name = "tl_obj_" + node.func.attr
                 return ast.Call(
                     func=ast.Name(id=helper_name, ctx=ast.Load()),
                     args=[node.func.value] + list(node.args),
                     keywords=list(node.keywords),
                 )
-            if isinstance(node.func,
-                          ast.Attribute) and node.func.attr in ["reshape", "trans", "split", "join", "reduce"]:
+            if isinstance(node.func, ast.Attribute) and node.func.attr in [
+                "reshape",
+                "trans",
+                "split",
+                "join",
+                "reduce",
+            ]:
                 if node.func.attr == "split":
                     receiver_expr = node.func.value
-                    wrapped_receiver = ast.Call(func=ast.Name(id="set_split_src_layout", ctx=ast.Load()),
-                                                args=[receiver_expr], keywords=[])
-                    new_func = ast.Attribute(value=ast.copy_location(wrapped_receiver, receiver_expr),
-                                             attr=node.func.attr, ctx=ast.Load())
+                    wrapped_receiver = ast.Call(
+                        func=ast.Name(id="set_split_src_layout", ctx=ast.Load()),
+                        args=[receiver_expr],
+                        keywords=[],
+                    )
+                    new_func = ast.Attribute(
+                        value=ast.copy_location(wrapped_receiver, receiver_expr),
+                        attr=node.func.attr,
+                        ctx=ast.Load(),
+                    )
                     node = ast.copy_location(
-                        ast.Call(func=new_func, args=list(node.args), keywords=list(node.keywords)), node)
+                        ast.Call(
+                            func=new_func,
+                            args=list(node.args),
+                            keywords=list(node.keywords),
+                        ),
+                        node,
+                    )
                 wrapped = ast.Call(
                     func=ast.Name(id="reset_to_default_layout", ctx=ast.Load()),
                     args=[node],
@@ -186,9 +258,14 @@ class TritonToGluonTransformer(ast.NodeTransformer):
                     self.jit_functions.add(resolved_obj)
                     self.queue.append(resolved_obj)
                 base_function = getattr(resolved_obj, "fn", resolved_obj)
-                normalized_name = getattr(base_function, "__name__",
-                                          getattr(base_function, "__qualname__", getattr(node, "id", "")))
-                return ast.copy_location(ast.Name(id=normalized_name, ctx=node.ctx), node)
+                normalized_name = getattr(
+                    base_function,
+                    "__name__",
+                    getattr(base_function, "__qualname__", getattr(node, "id", "")),
+                )
+                return ast.copy_location(
+                    ast.Name(id=normalized_name, ctx=node.ctx), node
+                )
             if isinstance(resolved_obj, triton.language.core.constexpr):
                 identifier = getattr(node, "id", None)
                 if identifier is not None:
@@ -216,11 +293,17 @@ class TritonToGluonTransformer(ast.NodeTransformer):
             # Use value.type.shape[0] as the vector length
             type_attr = ast.Attribute(value=value_expr, attr="type", ctx=ast.Load())
             shape_attr = ast.Attribute(value=type_attr, attr="shape", ctx=ast.Load())
-            len_expr = ast.Subscript(value=shape_attr, slice=ast.Constant(value=0), ctx=ast.Load())
+            len_expr = ast.Subscript(
+                value=shape_attr, slice=ast.Constant(value=0), ctx=ast.Load()
+            )
             if expanded_dim == 0:
-                parent_shape = ast.List(elts=[len_expr, ast.Constant(value=1)], ctx=ast.Load())
+                parent_shape = ast.List(
+                    elts=[len_expr, ast.Constant(value=1)], ctx=ast.Load()
+                )
             else:
-                parent_shape = ast.List(elts=[ast.Constant(value=1), len_expr], ctx=ast.Load())
+                parent_shape = ast.List(
+                    elts=[ast.Constant(value=1), len_expr], ctx=ast.Load()
+                )
             # Build SliceLayout(dim, default_blocked_layout(parent_shape, ttgl.num_warps()))
             slice_layout = ast.Call(
                 func=self.ttgl_attr("SliceLayout"),
@@ -228,8 +311,12 @@ class TritonToGluonTransformer(ast.NodeTransformer):
                     ast.Constant(value=expanded_dim),
                     ast.Call(
                         func=ast.Name(id="default_blocked_layout", ctx=ast.Load()),
-                        args=[parent_shape,
-                              ast.Call(func=self.ttgl_attr("num_warps"), args=[], keywords=[])],
+                        args=[
+                            parent_shape,
+                            ast.Call(
+                                func=self.ttgl_attr("num_warps"), args=[], keywords=[]
+                            ),
+                        ],
                         keywords=[],
                     ),
                 ],
@@ -250,18 +337,34 @@ class TritonToGluonTransformer(ast.NodeTransformer):
             arg.annotation = self.maybe_rewrite_constexpr_annotation(arg.annotation)
         # Vararg / kwarg
         if node.args.vararg is not None:
-            node.args.vararg.annotation = self.maybe_rewrite_constexpr_annotation(node.args.vararg.annotation)
+            node.args.vararg.annotation = self.maybe_rewrite_constexpr_annotation(
+                node.args.vararg.annotation
+            )
         if node.args.kwarg is not None:
-            node.args.kwarg.annotation = self.maybe_rewrite_constexpr_annotation(node.args.kwarg.annotation)
+            node.args.kwarg.annotation = self.maybe_rewrite_constexpr_annotation(
+                node.args.kwarg.annotation
+            )
         # Keyword-only args
         for arg in node.args.kwonlyargs:
             arg.annotation = self.maybe_rewrite_constexpr_annotation(arg.annotation)
         if self.is_jit:
             node.decorator_list.insert(
-                0, ast.Attribute(value=ast.Name(id="gluon", ctx=ast.Load()), attr="jit", ctx=ast.Load()))
+                0,
+                ast.Attribute(
+                    value=ast.Name(id="gluon", ctx=ast.Load()),
+                    attr="jit",
+                    ctx=ast.Load(),
+                ),
+            )
         else:
             node.decorator_list.insert(
-                0, ast.Attribute(value=ast.Name(id="gluon", ctx=ast.Load()), attr="constexpr_function", ctx=ast.Load()))
+                0,
+                ast.Attribute(
+                    value=ast.Name(id="gluon", ctx=ast.Load()),
+                    attr="constexpr_function",
+                    ctx=ast.Load(),
+                ),
+            )
         # Process body
         return self.generic_visit(node)
 
@@ -281,7 +384,9 @@ def unparse_original_assignments(constexpr_globals: dict) -> list[str]:
             for element in target_node.elts:
                 collect_names(element, names_out)
 
-    def parse_assigns_and_imports(path: str) -> tuple[dict[str, ast.AST], dict[str, str]]:
+    def parse_assigns_and_imports(
+        path: str,
+    ) -> tuple[dict[str, ast.AST], dict[str, str]]:
         try:
             with open(path, "r") as f:
                 module_ast = ast.parse(f.read())
@@ -302,7 +407,11 @@ def unparse_original_assignments(constexpr_globals: dict) -> list[str]:
                 if stmt.value is not None:
                     for identifier in names:
                         assigns[identifier] = stmt
-            elif isinstance(stmt, ast.ImportFrom) and stmt.level == 0 and isinstance(stmt.module, str):
+            elif (
+                isinstance(stmt, ast.ImportFrom)
+                and stmt.level == 0
+                and isinstance(stmt.module, str)
+            ):
                 for alias in stmt.names:
                     alias_name = alias.asname or alias.name.split(".")[-1]
                     imports[alias_name] = stmt.module
@@ -311,13 +420,20 @@ def unparse_original_assignments(constexpr_globals: dict) -> list[str]:
     def rewrite_constexpr_to_ttgl(node: ast.AST) -> ast.AST:
 
         class ConstexprToTtglRewriter(ast.NodeTransformer):
-
             def visit_Call(self, call_node: ast.Call) -> ast.AST:
                 call_node = self.generic_visit(call_node)
-                if isinstance(call_node.func, ast.Attribute) and call_node.func.attr == "constexpr":
+                if (
+                    isinstance(call_node.func, ast.Attribute)
+                    and call_node.func.attr == "constexpr"
+                ):
                     call_node.func = ast.copy_location(
-                        ast.Attribute(value=ast.Name(id="ttgl", ctx=ast.Load()), attr="constexpr", ctx=ast.Load()),
-                        call_node.func)
+                        ast.Attribute(
+                            value=ast.Name(id="ttgl", ctx=ast.Load()),
+                            attr="constexpr",
+                            ctx=ast.Load(),
+                        ),
+                        call_node.func,
+                    )
                 return call_node
 
         return ConstexprToTtglRewriter().visit(node)
@@ -333,7 +449,11 @@ def unparse_original_assignments(constexpr_globals: dict) -> list[str]:
                 if imported_module_name:
                     try:
                         module_spec = importlib.util.find_spec(imported_module_name)
-                        origin = getattr(module_spec, "origin", None) if module_spec is not None else None
+                        origin = (
+                            getattr(module_spec, "origin", None)
+                            if module_spec is not None
+                            else None
+                        )
                     except Exception:
                         origin = None
                     if origin:
@@ -364,9 +484,13 @@ def convert_triton_to_gluon(src: list[triton.runtime.jit.JITCallable]) -> str:
         callee_tree = ast.parse(callee_src)
         callee_scope = getattr(callee, "__globals__", {}) or {}
         jit = isinstance(callee, triton.runtime.JITFunction)
-        callee_transformer = TritonToGluonTransformer(globals_map=callee_scope, shared_jit_set=shared_jit_set,
-                                                      shared_queue=function_queue, is_jit=jit,
-                                                      constexpr_globals=constexpr_globals)
+        callee_transformer = TritonToGluonTransformer(
+            globals_map=callee_scope,
+            shared_jit_set=shared_jit_set,
+            shared_queue=function_queue,
+            is_jit=jit,
+            constexpr_globals=constexpr_globals,
+        )
         callee_new = callee_transformer.visit(callee_tree)
         ast.fix_missing_locations(callee_new)
         out += "\n\n" + ast.unparse(callee_new)

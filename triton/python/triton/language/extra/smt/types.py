@@ -5,7 +5,15 @@ from triton.language.semantic import TritonSemantic
 
 
 class buffered_tensor(tl.tensor):
-    def __init__(self, handle, element_ty: tl.dtype, shape: List, copies: int, storage: str, semantic: TritonSemantic = None):
+    def __init__(
+        self,
+        handle,
+        element_ty: tl.dtype,
+        shape: List,
+        copies: int,
+        storage: str,
+        semantic: TritonSemantic = None,
+    ):
         buf_type = buffered_tensor_type(element_ty, shape, copies, storage, semantic)
         super().__init__(handle, buf_type)
 
@@ -17,7 +25,7 @@ class buffered_tensor(tl.tensor):
         self.semantic = semantic
 
     def __getitem__(self, buffer_idx):
-       return buffer_view(self, buffer_idx, _semantic=self.semantic)
+        return buffer_view(self, buffer_idx, _semantic=self.semantic)
 
     def _flatten_ir(self, handles) -> None:
         handles.append(self.handle)
@@ -36,8 +44,14 @@ class buffered_tensor(tl.tensor):
 
 
 class buffered_tensor_type(tl.pointer_type):
-
-    def __init__(self, element_ty: tl.dtype, shape: List, copies: int, storage: str, semantic: TritonSemantic = None):
+    def __init__(
+        self,
+        element_ty: tl.dtype,
+        shape: List,
+        copies: int,
+        storage: str,
+        semantic: TritonSemantic = None,
+    ):
         super().__init__(element_ty, shape)
         self.storage = storage
         self.copies = copies
@@ -45,25 +59,39 @@ class buffered_tensor_type(tl.pointer_type):
         self.element_ty = element_ty
         self.shape = shape
 
-        assert semantic or copies == 0, "buffered_tensor array must be created with a builder"
+        assert semantic or copies == 0, (
+            "buffered_tensor array must be created with a builder"
+        )
 
-    def _unflatten_ir(self, handles: List[ir.value], cursor: int) -> Tuple[buffered_tensor, int]:
-        value = buffered_tensor(handles[cursor], self.scalar, self.shape, self.copies, self.storage, self.semantic)
+    def _unflatten_ir(
+        self, handles: List[ir.value], cursor: int
+    ) -> Tuple[buffered_tensor, int]:
+        value = buffered_tensor(
+            handles[cursor],
+            self.scalar,
+            self.shape,
+            self.copies,
+            self.storage,
+            self.semantic,
+        )
         return value, cursor + 1
 
     def mangle(self) -> str:
         elt = self.scalar.mangle()
-        shape = '_'.join(map(str, self.shape))
+        shape = "_".join(map(str, self.shape))
         if self.copies > 0:
-            shape += f'_{self.copies}'
-        return f'buffered_{elt}S{shape}'
+            shape += f"_{self.copies}"
+        return f"buffered_{elt}S{shape}"
 
     def __str__(self) -> str:
         return f"buffered_tensor_ptr_<{self.element_ty}, {self.shape}, {self.copies}>"
 
     def __eq__(self, other) -> bool:
-        return (type(self) is type(other) and self.shape == other.shape
-                and self.copies == other.copies)
+        return (
+            type(self) is type(other)
+            and self.shape == other.shape
+            and self.copies == other.copies
+        )
 
     def _flatten_ir_types(self, builder: ir.builder, out: List[ir.type]) -> None:
         out.append(self.to_ir(builder))
@@ -83,7 +111,11 @@ class buffered_tensor_type(tl.pointer_type):
 
     @property
     def scalar(self):
-        return self.element_ty.scalar if hasattr(self.element_ty, 'scalar') else self.element_ty
+        return (
+            self.element_ty.scalar
+            if hasattr(self.element_ty, "scalar")
+            else self.element_ty
+        )
 
     def _flatten_ir(self, handles) -> None:
         handles.append(self.handle)
@@ -99,7 +131,9 @@ def buffer_view(
     Returns a subview of the buffer.
     """
     buffer_idx = _semantic._convert_elem_to_ir_value(buffer_idx, require_i64=False)
-    view_handle = _semantic.builder.create_buffer_tensor_subview(local_allocated_buffers.handle, buffer_idx)
+    view_handle = _semantic.builder.create_buffer_tensor_subview(
+        local_allocated_buffers.handle, buffer_idx
+    )
 
     original_shape = local_allocated_buffers.shape
     if local_allocated_buffers.type.copies == 0:
@@ -134,7 +168,8 @@ class mbarrier_type(tl.dtype):
         return self.num == other.num
 
     def __hash__(self):
-        return hash(('mbarrier_type', self.num))
+        return hash(("mbarrier_type", self.num))
+
 
 class barrier_view:
     """
@@ -159,17 +194,22 @@ class barrier_view:
     def __repr__(self):
         return f"barrier_view(index={self.index}, parent_num={self.parent.num})"
 
+
 class mbarrier(tl.tensor):
     """
     Handle for multi-copy mbarrier.
     """
 
-    def __init__(self, handle, num: int,
-                 flag: int = 0,
-                 arrive_count: int = 0,
-                 transaction_count: int = 0,
-                 expect_count: int = 1,
-                 semantics=None):
+    def __init__(
+        self,
+        handle,
+        num: int,
+        flag: int = 0,
+        arrive_count: int = 0,
+        transaction_count: int = 0,
+        expect_count: int = 1,
+        semantics=None,
+    ):
         self._type = mbarrier_type(num, semantics)
         self.handle = handle
         self.num = num
@@ -193,7 +233,7 @@ class mbarrier(tl.tensor):
             idx_handle = self.semantics.builder.create_i64_constant(idx)
         elif isinstance(idx, tl.tensor):
             idx_handle = idx.handle
-        elif hasattr(idx, 'handle'):
+        elif hasattr(idx, "handle"):
             idx_handle = idx.handle
         else:
             raise TypeError(f"Unsupported index type: {type(idx)}")

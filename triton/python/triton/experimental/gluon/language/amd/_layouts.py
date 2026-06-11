@@ -33,6 +33,7 @@ class AMDMFMALayout(DistributedLayout):
     - 3: gfx942
     - 4: gfx950
     """
+
     version: int
     instr_shape: List[int]
     transposed: bool
@@ -46,7 +47,9 @@ class AMDMFMALayout(DistributedLayout):
         super().__setattr__("instr_shape", _unwrap_if_constexpr(self.instr_shape))
         super().__setattr__("transposed", _unwrap_if_constexpr(self.transposed))
         super().__setattr__("warps_per_cta", _unwrap_if_constexpr(self.warps_per_cta))
-        super().__setattr__("element_bitwidth", _unwrap_if_constexpr(self.element_bitwidth))
+        super().__setattr__(
+            "element_bitwidth", _unwrap_if_constexpr(self.element_bitwidth)
+        )
         super().__setattr__("tiles_per_warp", _unwrap_if_constexpr(self.tiles_per_warp))
         super().__setattr__("cga_layout", _unwrap_if_constexpr(self.cga_layout))
 
@@ -75,29 +78,43 @@ class AMDMFMALayout(DistributedLayout):
                 return ""
             return "_".join(map(str, x))
 
-        cga_layout = stringify(["~".join(map(str, vec)) for vec in self.cga_layout] if self.cga_layout else None)
+        cga_layout = stringify(
+            ["~".join(map(str, vec)) for vec in self.cga_layout]
+            if self.cga_layout
+            else None
+        )
         return f"MFMA_{self.version}_{stringify(self.instr_shape)}_{self.transposed}_{stringify(self.warps_per_cta)}_{self.element_bitwidth}_{stringify(self.tiles_per_warp)}_{cga_layout}_MFMA"
 
     def verify(self):
-        assert self.version >= 1 and self.version <= 4, "version must be in the [1, 4] range"
-        assert len(self.instr_shape) == 3, "instr_shape must follow the (M, N, K) format"
+        assert self.version >= 1 and self.version <= 4, (
+            "version must be in the [1, 4] range"
+        )
+        assert len(self.instr_shape) == 3, (
+            "instr_shape must follow the (M, N, K) format"
+        )
         valid_shapes = [[32, 32], [16, 16], [64, 4], [4, 64]]
-        assert self.instr_shape[0:2] in valid_shapes, f"invalid intrinsic shape {self.instr_shape}"
+        assert self.instr_shape[0:2] in valid_shapes, (
+            f"invalid intrinsic shape {self.instr_shape}"
+        )
         assert self.element_bitwidth in [32, 64], "element bitwidth must be 32 or 64"
 
         rank = len(self.warps_per_cta)
-        assert all(len(vec) == rank for vec in self.cga_layout), "cga_layout basis rank mismatch"
+        assert all(len(vec) == rank for vec in self.cga_layout), (
+            "cga_layout basis rank mismatch"
+        )
 
     def __hash__(self):
-        return hash((
-            self.version,
-            tuple(self.instr_shape),
-            self.transposed,
-            tuple(self.warps_per_cta),
-            self.element_bitwidth if self.element_bitwidth else None,
-            tuple(self.tiles_per_warp) if self.tiles_per_warp else None,
-            tuple(tuple(vec) for vec in self.cga_layout),
-        ))
+        return hash(
+            (
+                self.version,
+                tuple(self.instr_shape),
+                self.transposed,
+                tuple(self.warps_per_cta),
+                self.element_bitwidth if self.element_bitwidth else None,
+                tuple(self.tiles_per_warp) if self.tiles_per_warp else None,
+                tuple(tuple(vec) for vec in self.cga_layout),
+            )
+        )
 
     @property
     def rank(self):
@@ -122,6 +139,7 @@ class AMDWMMALayout(DistributedLayout):
     - 2: RDNA4; e.g., gfx1200, gfx1201
     - 3: gfx1250
     """
+
     version: int
     transposed: bool
     warps_per_cta: List[int]
@@ -141,7 +159,11 @@ class AMDWMMALayout(DistributedLayout):
 
         super().__setattr__("tiles_per_warp", tiles_per_warp)
 
-        instr_shape = _unwrap_if_constexpr(self.instr_shape) if self.instr_shape is not None else [16, 16, 16]
+        instr_shape = (
+            _unwrap_if_constexpr(self.instr_shape)
+            if self.instr_shape is not None
+            else [16, 16, 16]
+        )
         super().__setattr__("instr_shape", _unwrap_if_constexpr(instr_shape))
         super().__setattr__("cga_layout", _unwrap_if_constexpr(self.cga_layout))
         self.verify()
@@ -163,24 +185,34 @@ class AMDWMMALayout(DistributedLayout):
                 return ""
             return "_".join(map(str, x))
 
-        cga_layout = stringify(["~".join(map(str, vec)) for vec in self.cga_layout] if self.cga_layout else None)
+        cga_layout = stringify(
+            ["~".join(map(str, vec)) for vec in self.cga_layout]
+            if self.cga_layout
+            else None
+        )
         return f"WMMA_{self.version}_{self.transposed}_{stringify(self.warps_per_cta)}_{stringify(self.tiles_per_warp)}_{stringify(self.instr_shape)}_{cga_layout}_WMMA"
 
     def verify(self):
-        assert self.version >= 1 and self.version <= 3, "version must be in the [1, 3] range"
+        assert self.version >= 1 and self.version <= 3, (
+            "version must be in the [1, 3] range"
+        )
 
         rank = len(self.warps_per_cta)
-        assert all(len(vec) == rank for vec in self.cga_layout), "cga_layout basis rank mismatch"
+        assert all(len(vec) == rank for vec in self.cga_layout), (
+            "cga_layout basis rank mismatch"
+        )
 
     def __hash__(self):
-        return hash((
-            self.version,
-            self.transposed,
-            tuple(self.warps_per_cta),
-            tuple(self.tiles_per_warp) if self.tiles_per_warp else None,
-            tuple(self.instr_shape) if self.instr_shape else None,
-            tuple(tuple(vec) for vec in self.cga_layout),
-        ))
+        return hash(
+            (
+                self.version,
+                self.transposed,
+                tuple(self.warps_per_cta),
+                tuple(self.tiles_per_warp) if self.tiles_per_warp else None,
+                tuple(self.instr_shape) if self.instr_shape else None,
+                tuple(tuple(vec) for vec in self.cga_layout),
+            )
+        )
 
     @property
     def rank(self):

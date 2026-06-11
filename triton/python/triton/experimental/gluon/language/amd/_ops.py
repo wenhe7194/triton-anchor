@@ -15,32 +15,49 @@ def _verify_wmma(version, a, b, acc):
     layout = acc.type.layout
     _check(
         isinstance(layout, AMDWMMALayout) and layout.version == version,
-        lambda: f"Expected layout to be an instance of AMDWMMALayout with version {version}")
+        lambda: (
+            f"Expected layout to be an instance of AMDWMMALayout with version {version}"
+        ),
+    )
 
     a_layout = a.type.layout
     _check(
-        isinstance(a_layout, DotOperandLayout) and isinstance(a_layout.parent, AMDWMMALayout)
+        isinstance(a_layout, DotOperandLayout)
+        and isinstance(a_layout.parent, AMDWMMALayout)
         and a_layout.parent.version == version,
-        lambda: "Expected a's layout to be a DotOperandLayout with parent matching AMDWMMALayout")
+        lambda: (
+            "Expected a's layout to be a DotOperandLayout with parent matching AMDWMMALayout"
+        ),
+    )
 
     b_layout = b.type.layout
     _check(
-        isinstance(b_layout, DotOperandLayout) and isinstance(b_layout.parent, AMDWMMALayout)
+        isinstance(b_layout, DotOperandLayout)
+        and isinstance(b_layout.parent, AMDWMMALayout)
         and b_layout.parent.version == version,
-        lambda: "Expected b's layout to be a DotOperandLayout with parent matching AMDWMMALayout")
+        lambda: (
+            "Expected b's layout to be a DotOperandLayout with parent matching AMDWMMALayout"
+        ),
+    )
 
 
 def _wmma(version, a, b, acc, semantic):
-    """ Shared implementation for AMD WMMA operations for Gluon builtins """
+    """Shared implementation for AMD WMMA operations for Gluon builtins"""
     _verify_wmma(version, a, b, acc)
 
-    handle = semantic.dot(a, b, acc, input_precision=knobs.language.fp32_default, max_num_imprecise_acc=None,
-                          out_dtype=acc.dtype).handle
+    handle = semantic.dot(
+        a,
+        b,
+        acc,
+        input_precision=knobs.language.fp32_default,
+        max_num_imprecise_acc=None,
+        out_dtype=acc.dtype,
+    ).handle
     return ttgl.tensor(handle, acc.type)
 
 
 def _mma_scaled(a, a_scale, a_format, b, b_scale, b_format, acc, scale_fn, semantic):
-    """ Shared implementation for AMD WMMA scaled and MFMA scaled operation. """
+    """Shared implementation for AMD WMMA scaled and MFMA scaled operation."""
 
     def _get_scale_shape(op_idx, operand, format):
         operand_shape = [s for s in operand.type.shape]
@@ -62,7 +79,9 @@ def _mma_scaled(a, a_scale, a_format, b, b_scale, b_format, acc, scale_fn, seman
         if isinstance(scale, ttgl.tensor) and scale.numel.value != 1:
             # In the case of scale pre-shuffling, the input shape is different from the default shape. We only check
             # the number of elements here.
-            assert math.prod(scale_shape) == scale.numel.value, "Incompatible scale shape"
+            assert math.prod(scale_shape) == scale.numel.value, (
+                "Incompatible scale shape"
+            )
             return scale
 
         scale_layout = scale_fn(operand.type.layout, scale_shape)
@@ -72,6 +91,17 @@ def _mma_scaled(a, a_scale, a_format, b, b_scale, b_format, acc, scale_fn, seman
 
     a_scale = _create_and_broadcast_default_scale(0, a_scale, a_format)
     b_scale = _create_and_broadcast_default_scale(1, b_scale, b_format)
-    output = semantic.dot_scaled(a, a_scale, a_format, b, b_scale, b_format, acc, fast_math=False, lhs_k_pack=True,
-                                 rhs_k_pack=True, out_dtype=ttgl.float32)
+    output = semantic.dot_scaled(
+        a,
+        a_scale,
+        a_format,
+        b,
+        b_scale,
+        b_format,
+        acc,
+        fast_math=False,
+        lhs_k_pack=True,
+        rhs_k_pack=True,
+        out_dtype=ttgl.float32,
+    )
     return ttgl.tensor(output.handle, acc.type)

@@ -10,7 +10,6 @@ import torch
 
 
 class MXFP4Tensor:
-
     def __init__(self, data=None, size=None, device=None):
         """
         Tensor class for working with four bit E2M1 floating point data as defined by the
@@ -24,11 +23,13 @@ class MXFP4Tensor:
         """
         self.device = device
         if data is not None:
-            assert isinstance(data, torch.Tensor), "Parameter data must be a torch tensor"
+            assert isinstance(data, torch.Tensor), (
+                "Parameter data must be a torch tensor"
+            )
             self.device = data.device
             self.data = self._from_float(data)
         elif size is not None:
-            self.size = size if isinstance(size, tuple) else (size, )
+            self.size = size if isinstance(size, tuple) else (size,)
         else:
             raise ValueError("Either parameter data or size must be provided")
 
@@ -47,7 +48,9 @@ class MXFP4Tensor:
         Returns:
         - A torch tensor of type dtype representing the fp4e2m1 data.
         """
-        assert dtype == torch.float32, "Currently only float32 is supported for fp4e2m1 to float conversion"
+        assert dtype == torch.float32, (
+            "Currently only float32 is supported for fp4e2m1 to float conversion"
+        )
 
         data = self.data
         S = ((data >> 3) & 0x1).type(dtype)
@@ -91,7 +94,7 @@ class MXFP4Tensor:
         S = torch.signbit(values).type(torch.uint8)
         abs_values = torch.abs(values)
 
-        is_zero = (abs_values == 0)
+        is_zero = abs_values == 0
         is_invalid = torch.isnan(values) | torch.isinf(values)
 
         # Enumerate all possible E2M1 exponent and mantissa values. We will
@@ -124,7 +127,9 @@ class MXFP4Tensor:
                     candidate_E.append(E)
                     candidate_M.append(M)
 
-        candidates = torch.tensor(candidate_values, dtype=torch.float32, device=self.device)
+        candidates = torch.tensor(
+            candidate_values, dtype=torch.float32, device=self.device
+        )
         candidate_E = torch.tensor(candidate_E, dtype=torch.uint8, device=self.device)
         candidate_M = torch.tensor(candidate_M, dtype=torch.uint8, device=self.device)
 
@@ -143,7 +148,7 @@ class MXFP4Tensor:
         # even mantissas (M == 0). We do so by adding an epsilon bias to shift
         # the closest candidate with an even mantissa closer to the float value
         min_errors, _ = torch.min(errors, dim=1, keepdim=True)
-        is_tie = (errors == min_errors)
+        is_tie = errors == min_errors
         # More than one candidate has the min error for some float value
         if is_tie.sum() > 1:
             M_bits_expanded = candidate_M.unsqueeze(0).expand(N, -1)
@@ -174,8 +179,9 @@ class MXFP4Tensor:
         - A torch tensor of dtype uint8 with two e2m1 elements packed into one uint8.
         """
         data = self.data
-        assert 0 <= dim < data.ndim, \
+        assert 0 <= dim < data.ndim, (
             "The dimension to pack along is not within the range of tensor dimensions"
+        )
 
         size_along_dim = data.size(dim)
         new_size_along_dim = (size_along_dim + 1) // 2
@@ -185,7 +191,7 @@ class MXFP4Tensor:
             pad_sizes = [0] * (2 * data.ndim)
             pad_index = (data.ndim - dim - 1) * 2 + 1
             pad_sizes[pad_index] = 1
-            data = torch.nn.functional.pad(data, pad_sizes, mode='constant', value=0)
+            data = torch.nn.functional.pad(data, pad_sizes, mode="constant", value=0)
 
         new_shape = list(data.shape)
         new_shape[dim] = new_size_along_dim
@@ -218,7 +224,7 @@ class MXFP4Tensor:
 
         # Flatten along dim and dim+1 and then merge
         shape = list(stacked.shape)
-        new_shape = shape[:dim] + [shape[dim] * 2] + shape[dim + 2:]
+        new_shape = shape[:dim] + [shape[dim] * 2] + shape[dim + 2 :]
         data = stacked.reshape(*new_shape)
 
         # Remove any padding
@@ -231,7 +237,6 @@ class MXFP4Tensor:
 
 
 class MXScaleTensor:
-
     def __init__(self, data=None, size=None, device=None):
         """
         Tensor class for working with microscaling E8M0 block scale factors.
@@ -243,11 +248,13 @@ class MXScaleTensor:
         """
         self.device = device
         if data is not None:
-            assert isinstance(data, torch.Tensor), "Parameter data must be a torch tensor"
+            assert isinstance(data, torch.Tensor), (
+                "Parameter data must be a torch tensor"
+            )
             self.device = data.device
             self.data = self._from_float(data)
         elif size is not None:
-            self.size = size if isinstance(size, tuple) else (size, )
+            self.size = size if isinstance(size, tuple) else (size,)
         else:
             raise ValueError("Either parameter data or size must be provided")
 
@@ -258,18 +265,32 @@ class MXScaleTensor:
         """
         bias = 127
 
-        min_exponent = 0 if low is None else max(0, int(torch.log2(torch.tensor(low))) + bias)
-        max_exponent = 254 if high is None else min(254, max(0, int(torch.log2(torch.tensor(high))) + bias))
+        min_exponent = (
+            0 if low is None else max(0, int(torch.log2(torch.tensor(low))) + bias)
+        )
+        max_exponent = (
+            254
+            if high is None
+            else min(254, max(0, int(torch.log2(torch.tensor(high))) + bias))
+        )
         assert min_exponent <= max_exponent, "Low must be less than or equal to high"
 
-        E = torch.randint(min_exponent, max_exponent + 1, size=self.size, dtype=torch.uint8, device=self.device)
+        E = torch.randint(
+            min_exponent,
+            max_exponent + 1,
+            size=self.size,
+            dtype=torch.uint8,
+            device=self.device,
+        )
         self.data = E
         return self
 
     def to(self, dtype):
-        assert dtype == torch.float32, "Currently only float32 is supported for f8e8m0 to float conversion"
+        assert dtype == torch.float32, (
+            "Currently only float32 is supported for f8e8m0 to float conversion"
+        )
         data = self.data.type(dtype)
-        is_nan = (data == 255)
+        is_nan = data == 255
         e_biased = data.clone()
         e_biased[is_nan] = 0
         e = e_biased - 127

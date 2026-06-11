@@ -5,6 +5,7 @@ from typing import Any, Callable, TYPE_CHECKING, Union, List, Dict
 
 if TYPE_CHECKING:
     from .language import core
+
     IterableType = Union[list[Any], tuple[Any, ...], core.tuple, core.tuple_type]
     ObjPath = tuple[int, ...]
 
@@ -17,6 +18,7 @@ def get_iterable_path(iterable: IterableType, path: ObjPath) -> Any:
 
 def set_iterable_path(iterable: IterableType, path: tuple[int, ...], val: Any):
     from .language import core
+
     assert len(path) != 0
     prev = iterable if len(path) == 1 else get_iterable_path(iterable, path[:-1])
     assert isinstance(prev, core.tuple)
@@ -25,6 +27,7 @@ def set_iterable_path(iterable: IterableType, path: tuple[int, ...], val: Any):
 
 def is_iterable(x):
     from .language import core
+
     return isinstance(x, (list, tuple, core.tuple, core.tuple_type))
 
 
@@ -39,7 +42,9 @@ def apply_with_path(value: Any, fn: Callable[[ObjPath, Any], None], _path=None) 
         fn(_path, value)
 
 
-def find_paths_if(iterable: Union[IterableType, Any], pred: Callable[[ObjPath, Any], bool]) -> list[ObjPath]:
+def find_paths_if(
+    iterable: Union[IterableType, Any], pred: Callable[[ObjPath, Any], bool]
+) -> list[ObjPath]:
     # We need to use dict so that ordering is maintained, while set doesn't guarantee order
     ret: dict[ObjPath, None] = {}
 
@@ -63,13 +68,17 @@ def validate_block_shape(shape: List[int]):
     numel = 1
     for i, d in enumerate(shape):
         if not isinstance(d, int):
-            raise TypeError(f"Shape element {i} must have type `constexpr[int]`, got `constexpr[{type(d)}]")
+            raise TypeError(
+                f"Shape element {i} must have type `constexpr[int]`, got `constexpr[{type(d)}]"
+            )
         if not is_power_of_two(d):
             raise ValueError(f"Shape element {i} must be a power of 2")
         numel *= d
 
     if numel > TRITON_MAX_TENSOR_NUMEL:
-        raise ValueError(f"numel ({numel}) exceeds triton maximum tensor numel ({TRITON_MAX_TENSOR_NUMEL})")
+        raise ValueError(
+            f"numel ({numel}) exceeds triton maximum tensor numel ({TRITON_MAX_TENSOR_NUMEL})"
+        )
     return numel
 
 
@@ -124,14 +133,10 @@ def canonicalize_ptr_dtype(dtype, is_const):
 
 
 BITWIDTH_DICT: Dict[str, int] = {
-    **{f"u{n}": n
-       for n in (1, 8, 16, 32, 64)},
-    **{f"i{n}": n
-       for n in (1, 8, 16, 32, 64)},
-    **{f"fp{n}": n
-       for n in (16, 32, 64)},
-    **{f"fp8{suffix}": 8
-       for suffix in ("e4nv", "e4b15", "e4b8", "e5", "e5b16")},
+    **{f"u{n}": n for n in (1, 8, 16, 32, 64)},
+    **{f"i{n}": n for n in (1, 8, 16, 32, 64)},
+    **{f"fp{n}": n for n in (16, 32, 64)},
+    **{f"fp8{suffix}": 8 for suffix in ("e4nv", "e4b15", "e4b8", "e5", "e5b16")},
     "bf16": 16,
     "void": 0,
 }

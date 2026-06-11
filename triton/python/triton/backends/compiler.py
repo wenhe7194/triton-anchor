@@ -16,6 +16,7 @@ class GPUTarget(object):
 
 class Language(Enum):
     """The input language being compiled by the backend."""
+
     TRITON = 0
     GLUON = 1
 

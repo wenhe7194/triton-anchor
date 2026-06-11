@@ -27,10 +27,16 @@ class TensorDescriptor:
         for shape_dim in self.shape:
             assert shape_dim > 0, "shape must be positive"
         assert self.strides[-1] == 1, "Last dimension must be contiguous"
-        assert self.padding == "zero" or self.padding == "nan", "Illegal value for padding"
+        assert self.padding == "zero" or self.padding == "nan", (
+            "Illegal value for padding"
+        )
         if self.padding == "nan":
-            assert self.base.dtype.is_floating_point, "Padding option `nan` is only supported for floating point tensors"
+            assert self.base.dtype.is_floating_point, (
+                "Padding option `nan` is only supported for floating point tensors"
+            )
 
     @staticmethod
     def from_tensor(tensor: Any, block_shape: List[int], padding="zero"):
-        return TensorDescriptor(tensor, tensor.shape, tensor.stride(), block_shape, padding)
+        return TensorDescriptor(
+            tensor, tensor.shape, tensor.stride(), block_shape, padding
+        )

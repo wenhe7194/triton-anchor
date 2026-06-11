@@ -13,7 +13,9 @@ __all__ = [
 
 
 @builtin
-def global_load_to_shared(dest, ptr, mask=None, other=None, cache_modifier="", _semantic=None):
+def global_load_to_shared(
+    dest, ptr, mask=None, other=None, cache_modifier="", _semantic=None
+):
     """
     AMD global load to shared operation. This operation loads data directly
     from global memory to shared memory without going through registers. It
@@ -46,11 +48,16 @@ def global_load_to_shared(dest, ptr, mask=None, other=None, cache_modifier="", _
         cache_modifier (str): Cache modifier specifier. Defaults to "".
     """
     _check(ptr.type.is_block(), lambda: "expected ptr to be a tensor")
-    _check(isinstance(ptr.type.layout, (BlockedLayout, SliceLayout)),
-           lambda: "expected ptr type layout to be BlockedLayout or SliceLayout")
     _check(
-        dest.shape == ptr.shape, lambda:
-        f"expected dest shape to match pointer shape but got dest.shape = {dest.shape}, pointer.shape = {ptr.shape}")
+        isinstance(ptr.type.layout, (BlockedLayout, SliceLayout)),
+        lambda: "expected ptr type layout to be BlockedLayout or SliceLayout",
+    )
+    _check(
+        dest.shape == ptr.shape,
+        lambda: (
+            f"expected dest shape to match pointer shape but got dest.shape = {dest.shape}, pointer.shape = {ptr.shape}"
+        ),
+    )
 
     mask = _unwrap_if_constexpr(mask)
     if mask is not None:
@@ -64,12 +71,21 @@ def global_load_to_shared(dest, ptr, mask=None, other=None, cache_modifier="", _
     cache_modifier = _semantic._str_to_load_cache_modifier(cache_modifier)
     mask_handle = mask.handle if mask is not None else ir.value()
     other_handle = other.handle if other is not None else ir.value()
-    _semantic.builder.create_async_copy_global_to_local(dest.handle, ptr.handle, mask_handle, other_handle,
-                                                        cache_modifier, ir.EVICTION_POLICY.NORMAL, False)
+    _semantic.builder.create_async_copy_global_to_local(
+        dest.handle,
+        ptr.handle,
+        mask_handle,
+        other_handle,
+        cache_modifier,
+        ir.EVICTION_POLICY.NORMAL,
+        False,
+    )
 
 
 @builtin
-def buffer_load_to_shared(dest, ptr, offsets, mask=None, other=None, cache_modifier="", _semantic=None):
+def buffer_load_to_shared(
+    dest, ptr, offsets, mask=None, other=None, cache_modifier="", _semantic=None
+):
     """
     AMD buffer load to shared operation. Buffer load is similar to global load
     but it accesses global memory via a scalar base pointer and a tensor of
@@ -102,8 +118,10 @@ def buffer_load_to_shared(dest, ptr, offsets, mask=None, other=None, cache_modif
         other (tensor or scalar, optional): Tensor or scalar providing default values for masked elements. Defaults to None.
         cache_modifier (str): Cache modifier specifier. Defaults to "".
     """
-    _check(isinstance(offsets.type.layout, (BlockedLayout, SliceLayout)),
-           lambda: "expected offsets type layout to be BlockedLayout or SliceLayout")
+    _check(
+        isinstance(offsets.type.layout, (BlockedLayout, SliceLayout)),
+        lambda: "expected offsets type layout to be BlockedLayout or SliceLayout",
+    )
     _verify_buffer_ops(ptr, offsets, mask, other)
 
     mask = _unwrap_if_constexpr(mask)
@@ -120,8 +138,9 @@ def buffer_load_to_shared(dest, ptr, offsets, mask=None, other=None, cache_modif
     stride = ir.value()
     cache_modifier = _semantic._str_to_load_cache_modifier(cache_modifier)
 
-    _semantic.builder.create_buffer_load_to_local(dest.handle, ptr.handle, offsets.handle, mask, other, stride,
-                                                  cache_modifier)
+    _semantic.builder.create_buffer_load_to_local(
+        dest.handle, ptr.handle, offsets.handle, mask, other, stride, cache_modifier
+    )
 
 
 @builtin
@@ -166,5 +185,7 @@ def load_shared_relaxed(smem, layout, _semantic=None):
 
     layout = _unwrap_if_constexpr(layout)
     ret = _semantic.shared_load(smem, layout)
-    ret.handle.set_attr(SYNCED_VIA_WAIT_ATTR_NAME, _semantic.builder.get_bool_attr(True))
+    ret.handle.set_attr(
+        SYNCED_VIA_WAIT_ATTR_NAME, _semantic.builder.get_bool_attr(True)
+    )
     return ret

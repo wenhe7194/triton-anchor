@@ -57,7 +57,9 @@ class TritonSharedAdapter(ILinalgOptAdapter):
                 ),
             )
 
-        ttir_text = str(ttir_module) if not isinstance(ttir_module, str) else ttir_module
+        ttir_text = (
+            str(ttir_module) if not isinstance(ttir_module, str) else ttir_module
+        )
         ttir_text = self._ensure_target_attrs(ttir_text, metadata)
         flags = self._get_pipeline_flags()
 
@@ -76,20 +78,24 @@ class TritonSharedAdapter(ILinalgOptAdapter):
                     detail=f"triton-shared-opt failed with exit code {e.returncode}",
                 )
             except FileNotFoundError:
-                raise AdapterConversionError(self.name(), detail=f"triton-shared-opt not found at: {opt_path}")
+                raise AdapterConversionError(
+                    self.name(), detail=f"triton-shared-opt not found at: {opt_path}"
+                )
             return dst.read_text()
 
     def _ensure_target_attrs(self, ttir_text: str, metadata: dict) -> str:
         attrs = {
-            "tt.num_threads": f'{int(self._resolve_num_threads(metadata))} : i32',
+            "tt.num_threads": f"{int(self._resolve_num_threads(metadata))} : i32",
             "tt.arch_id": f'"{self._resolve_arch_id(metadata)}"',
-            "tt.force_vector_interleave": f'{int(self._resolve_force_vector_interleave(metadata))} : i32',
+            "tt.force_vector_interleave": f"{int(self._resolve_force_vector_interleave(metadata))} : i32",
         }
         if all(key in ttir_text for key in attrs):
             return ttir_text
 
         if "module attributes {" in ttir_text:
-            match = re.search(r"module\s+attributes\s*\{([^}]*)\}\s*\{", ttir_text, re.S)
+            match = re.search(
+                r"module\s+attributes\s*\{([^}]*)\}\s*\{", ttir_text, re.S
+            )
             if not match:
                 return ttir_text
             attr_block = match.group(1).strip()
@@ -100,7 +106,11 @@ class TritonSharedAdapter(ILinalgOptAdapter):
             replacement = "module attributes {" + ", ".join(entries) + "} {"
             return ttir_text[: match.start()] + replacement + ttir_text[match.end() :]
 
-        insertion = "module attributes {" + ", ".join(f"{k} = {v}" for k, v in attrs.items()) + "} {"
+        insertion = (
+            "module attributes {"
+            + ", ".join(f"{k} = {v}" for k, v in attrs.items())
+            + "} {"
+        )
         return re.sub(r"module\s*\{", insertion, ttir_text, count=1)
 
     def _resolve_arch_id(self, metadata: dict) -> str:

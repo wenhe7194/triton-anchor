@@ -9,7 +9,14 @@ if TYPE_CHECKING:
     from triton._C.libtriton.gluon_ir import GluonOpBuilder
     from ._semantic import GluonSemantic
 
-from ._layouts import SharedLayout, DistributedLayout, BlockedLayout, DotOperandLayout, AutoLayout, CoalescedLayout
+from ._layouts import (
+    SharedLayout,
+    DistributedLayout,
+    BlockedLayout,
+    DotOperandLayout,
+    AutoLayout,
+    CoalescedLayout,
+)
 from triton._C.libtriton import ir
 import triton.language.core as tl_core
 from triton.language.core import (
@@ -91,8 +98,10 @@ def builtin(fn: T) -> T:
     @wraps(fn)
     def wrapper(*args, **kwargs):
         if "_semantic" not in kwargs or kwargs["_semantic"] is None:
-            raise ValueError("Did you forget to add @triton.gluon.jit ? "
-                             "(`_semantic` argument must be provided outside of JIT functions.)")
+            raise ValueError(
+                "Did you forget to add @triton.gluon.jit ? "
+                "(`_semantic` argument must be provided outside of JIT functions.)"
+            )
         return fn(*args, **kwargs)
 
     setattr(wrapper, GLUON_BUILTIN, True)
@@ -144,18 +153,19 @@ where = builtin(tl_core.where)
 
 
 class distributed_type(block_type):
-
     def __init__(self, element_ty: dtype, shape: List[int], layout):
         layout = _unwrap_if_constexpr(layout)
         shape = _unwrap_if_constexpr(shape)
         super().__init__(element_ty, shape)
         self.layout = layout
         self.name = f"<{self.shape}, {self.element_ty}, {self.layout}>"
-        assert isinstance(layout, DistributedLayout), "tensor layout must be a DistributedLayout"
+        assert isinstance(layout, DistributedLayout), (
+            "tensor layout must be a DistributedLayout"
+        )
         if not isinstance(layout, (AutoLayout, CoalescedLayout)):
-            assert len(
-                shape
-            ) == layout.rank, f"tensor shape and layout rank mismatch: shape={shape}, layout={layout}, shape rank={len(shape)}, layout rank={layout.rank}"
+            assert len(shape) == layout.rank, (
+                f"tensor shape and layout rank mismatch: shape={shape}, layout={layout}, shape rank={len(shape)}, layout rank={layout.rank}"
+            )
 
     def to_ir(self, builder: ir.builder) -> ir.type:
         elem_ty = self.element_ty.to_ir(builder)
@@ -178,7 +188,6 @@ class distributed_type(block_type):
 
 
 class shared_memory_descriptor_type(base_type):
-
     def __init__(self, element_ty, shape, layout, alloc_shape):
         shape = _unwrap_if_constexpr(shape)
         alloc_shape = _unwrap_if_constexpr(alloc_shape)
@@ -197,8 +206,12 @@ class shared_memory_descriptor_type(base_type):
             self.alloc_shape,
         )
 
-    def _unflatten_ir(self, handles: List[ir.Value], cursor: int) -> Tuple[shared_memory_descriptor, int]:
-        value = shared_memory_descriptor(handles[cursor], self.element_ty, self.shape, self.layout, self.alloc_shape)
+    def _unflatten_ir(
+        self, handles: List[ir.Value], cursor: int
+    ) -> Tuple[shared_memory_descriptor, int]:
+        value = shared_memory_descriptor(
+            handles[cursor], self.element_ty, self.shape, self.layout, self.alloc_shape
+        )
         return value, cursor + 1
 
     def _flatten_ir_types(self, builder: GluonOpBuilder, out: List[ir.type]) -> None:
@@ -208,8 +221,12 @@ class shared_memory_descriptor_type(base_type):
         return f"shared_memory_descriptor<{self.element_ty}, {self.shape}, {self.layout}, {self.alloc_shape}>"
 
     def __eq__(self, other) -> bool:
-        return (type(self) is type(other) and self.shape == other.shape and self.layout == other.layout
-                and self.alloc_shape == other.alloc_shape)
+        return (
+            type(self) is type(other)
+            and self.shape == other.shape
+            and self.layout == other.layout
+            and self.alloc_shape == other.alloc_shape
+        )
 
     def __neq__(self, other) -> bool:
         return not (self == other)
@@ -227,7 +244,9 @@ class shared_memory_descriptor(base_value):
 
     def __init__(self, handle, element_ty, shape, layout, alloc_shape):
         self.handle = handle
-        self.type = shared_memory_descriptor_type(element_ty, shape, layout, alloc_shape)
+        self.type = shared_memory_descriptor_type(
+            element_ty, shape, layout, alloc_shape
+        )
 
     def _flatten_ir(self, handles: List[ir.value]) -> None:
         handles.append(self.handle)
@@ -280,7 +299,9 @@ class shared_memory_descriptor(base_value):
         return _semantic.shared_store(self, value)
 
     @builtin
-    def slice(self, start, length, dim=0, _semantic: GluonSemantic = None) -> shared_memory_descriptor:
+    def slice(
+        self, start, length, dim=0, _semantic: GluonSemantic = None
+    ) -> shared_memory_descriptor:
         """
         Create a subview of shared memory by slicing along a given dimension.
 
@@ -312,7 +333,9 @@ class shared_memory_descriptor(base_value):
         return _semantic.memdesc_index(self, index)
 
     @builtin
-    def permute(self, order, _semantic: GluonSemantic = None) -> shared_memory_descriptor:
+    def permute(
+        self, order, _semantic: GluonSemantic = None
+    ) -> shared_memory_descriptor:
         """
         Permute the dimensions of the shared memory descriptor.
 
@@ -326,7 +349,9 @@ class shared_memory_descriptor(base_value):
         return _semantic.memdesc_trans(self, order)
 
     @builtin
-    def reshape(self, shape, _semantic: GluonSemantic = None) -> shared_memory_descriptor:
+    def reshape(
+        self, shape, _semantic: GluonSemantic = None
+    ) -> shared_memory_descriptor:
         """
         Reshape the shared memory descriptor to a new shape and layout.
 
@@ -341,7 +366,9 @@ class shared_memory_descriptor(base_value):
         return _semantic.memdesc_reshape(self, shape)
 
     @builtin
-    def _reinterpret(self, dtype, shape, layout, _semantic: GluonSemantic = None) -> shared_memory_descriptor:
+    def _reinterpret(
+        self, dtype, shape, layout, _semantic: GluonSemantic = None
+    ) -> shared_memory_descriptor:
         """
         Reinterpret the shared memory descriptor as a different dtype, shape, or layout.
 
@@ -446,7 +473,9 @@ def histogram(input, num_bins, mask=None, layout=None, _semantic=None, _generato
 
 
 @builtin
-def allocate_shared_memory(element_ty, shape, layout, value=None, _semantic=None) -> shared_memory_descriptor:
+def allocate_shared_memory(
+    element_ty, shape, layout, value=None, _semantic=None
+) -> shared_memory_descriptor:
     """
     Allocate shared memory for a tensor with the given element type, shape, and layout.
 
@@ -493,7 +522,13 @@ def fp4_to_fp(src, elem_type, axis, _semantic=None):
 
 
 @builtin
-def warp_specialize(functions_and_args, worker_num_warps, worker_num_regs=None, _semantic=None, _generator=None):
+def warp_specialize(
+    functions_and_args,
+    worker_num_warps,
+    worker_num_regs=None,
+    _semantic=None,
+    _generator=None,
+):
     """
     Create a warp-specialized execution region, partitioning work across warps.
 
@@ -516,7 +551,9 @@ def warp_specialize(functions_and_args, worker_num_warps, worker_num_regs=None, 
     worker_num_warps = [_unwrap_if_constexpr(w) for w in worker_num_warps]
     if worker_num_regs is not None:
         worker_num_regs = [_unwrap_if_constexpr(r) for r in worker_num_regs]
-    return _semantic.warp_specialize(functions_and_args, worker_num_warps, worker_num_regs, _generator)
+    return _semantic.warp_specialize(
+        functions_and_args, worker_num_warps, worker_num_regs, _generator
+    )
 
 
 @builtin
@@ -583,15 +620,23 @@ def dot_fma(a, b, acc, _semantic=None):
     assert isinstance(mma_layout, BlockedLayout), "acc must have a BlockedLayout"
     assert isinstance(a.type.layout, DotOperandLayout), "a must have a DotOperandLayout"
     assert isinstance(b.type.layout, DotOperandLayout), "b must have a DotOperandLayout"
-    assert a.type.layout.parent == mma_layout, "a's parent layout must be the same as acc's layout"
-    assert b.type.layout.parent == mma_layout, "b's parent layout must be the same as acc's layout"
+    assert a.type.layout.parent == mma_layout, (
+        "a's parent layout must be the same as acc's layout"
+    )
+    assert b.type.layout.parent == mma_layout, (
+        "b's parent layout must be the same as acc's layout"
+    )
     assert a.type.layout.operand_index == 0, "a's operand index must be 0"
     assert b.type.layout.operand_index == 1, "b's operand index must be 1"
 
     M, N = acc.shape
     K = a.shape[1]
     if M * N * K > 2**19:
-        warnings.warn(f"Large dot FMA instruction size {M}x{N}x{K} may have slow compile times")
+        warnings.warn(
+            f"Large dot FMA instruction size {M}x{N}x{K} may have slow compile times"
+        )
 
-    handle = _semantic.dot(a, b, acc, input_precision=None, max_num_imprecise_acc=None, out_dtype=acc.dtype).handle
+    handle = _semantic.dot(
+        a, b, acc, input_precision=None, max_num_imprecise_acc=None, out_dtype=acc.dtype
+    ).handle
     return tensor(handle, acc.type)

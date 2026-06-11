@@ -7,8 +7,8 @@ from . import types as smt
 
 from typing import TypeVar
 
-T = TypeVar('T')
-TensorTy = TypeVar('TensorTy')
+T = TypeVar("T")
+TensorTy = TypeVar("TensorTy")
 
 
 def _ceil_div(lhs, rhs):
@@ -36,30 +36,39 @@ def descriptor_load(base: tl.tensor, offsets, _semantic=None) -> tl.tensor:
     return tl.tensor(handle, dst_ty)
 
 
-def descriptor_load_to_destination(base: tl.tensor, offsets, destination, _semantic=None) -> tl.tensor:
+def descriptor_load_to_destination(
+    base: tl.tensor, offsets, destination, _semantic=None
+) -> tl.tensor:
     semantic_instance = tl_semantic.TritonSemantic(_semantic.builder)
     offsets = semantic_instance._convert_to_ir_values(offsets, require_i64=False)
 
-    _semantic.builder.create_descriptor_load_to_destination(base.handle, offsets, destination.handle)
+    _semantic.builder.create_descriptor_load_to_destination(
+        base.handle, offsets, destination.handle
+    )
 
 
-def view(base: tl.tensor, offsets, shape, packed_size, destination=None, _semantic=None) -> tl.tensor:
+def view(
+    base: tl.tensor, offsets, shape, packed_size, destination=None, _semantic=None
+) -> tl.tensor:
     semantic_instance = tl_semantic.TritonSemantic(_semantic.builder)
     offsets = semantic_instance._convert_to_ir_values(offsets, require_i64=False)
 
     shape = [elem.value if isinstance(elem, tl.constexpr) else elem for elem in shape]
-    packed_size = [elem.value if isinstance(elem, tl.constexpr) else elem for elem in packed_size]
+    packed_size = [
+        elem.value if isinstance(elem, tl.constexpr) else elem for elem in packed_size
+    ]
 
     # Resolve optional destination handle for DPS
     dest_handle = destination.handle if destination is not None else None
 
-    assert len(shape) == len(packed_size), \
+    assert len(shape) == len(packed_size), (
         "Shape and packed_size must have the same length"
+    )
 
     pointee_type = base.type.element_ty
 
     is_block_ptr = False
-    if hasattr(pointee_type, 'is_block') and pointee_type.is_block():
+    if hasattr(pointee_type, "is_block") and pointee_type.is_block():
         is_block_ptr = True
 
     if is_block_ptr:
@@ -75,36 +84,55 @@ def view(base: tl.tensor, offsets, shape, packed_size, destination=None, _semant
                 base_packed = [base_shape[2], base_shape[3]]
                 if list(packed_size) == base_packed:
                     # Same packed_size → subview (preserve packing)
-                    handle = _semantic.builder.create_subview(base.handle, offsets, shape)
+                    handle = _semantic.builder.create_subview(
+                        base.handle, offsets, shape
+                    )
                 else:
                     # Different packed_size on ptr → subview_pack
-                    handle = _semantic.builder.create_subview_pack(base.handle, offsets, shape, packed_size)
+                    handle = _semantic.builder.create_subview_pack(
+                        base.handle, offsets, shape, packed_size
+                    )
             else:
                 # 2D base → subview_pack (apply packing)
-                handle = _semantic.builder.create_subview_pack(base.handle, offsets, shape, packed_size)
+                handle = _semantic.builder.create_subview_pack(
+                    base.handle, offsets, shape, packed_size
+                )
     else:
         element_ty = pointee_type
         # Dispatch to pack, unpack, or repack
         if all(s == 1 for s in packed_size):
             # packed_size=[1,1] → unpack (4D→2D)
-            handle = _semantic.builder.create_unpack(base.handle, offsets, shape, destination=dest_handle)
+            handle = _semantic.builder.create_unpack(
+                base.handle, offsets, shape, destination=dest_handle
+            )
         else:
-            base_shape = base.type.shape if hasattr(base.type, 'shape') else []
+            base_shape = base.type.shape if hasattr(base.type, "shape") else []
             base_is_4d = len(base_shape) == 4
             if base_is_4d and not all(s == 0 for s in packed_size):
                 base_packed = [base_shape[2], base_shape[3]]
                 if list(packed_size) != base_packed:
                     # 4D input with different packed → repack
-                    handle = _semantic.builder.create_repack(base.handle, offsets, shape, packed_size,
-                                                             destination=dest_handle)
+                    handle = _semantic.builder.create_repack(
+                        base.handle,
+                        offsets,
+                        shape,
+                        packed_size,
+                        destination=dest_handle,
+                    )
                 else:
                     # 4D input with same packed_size → pack (defensive, shouldn't normally happen)
-                    handle = _semantic.builder.create_pack(base.handle, offsets, shape, packed_size,
-                                                           destination=dest_handle)
+                    handle = _semantic.builder.create_pack(
+                        base.handle,
+                        offsets,
+                        shape,
+                        packed_size,
+                        destination=dest_handle,
+                    )
             else:
                 # 2D→4D standard pack
-                handle = _semantic.builder.create_pack(base.handle, offsets, shape, packed_size,
-                                                       destination=dest_handle)
+                handle = _semantic.builder.create_pack(
+                    base.handle, offsets, shape, packed_size, destination=dest_handle
+                )
 
     # Compute result type (same logic as before, unchanged)
     if all(s == 0 for s in packed_size):
@@ -116,24 +144,34 @@ def view(base: tl.tensor, offsets, shape, packed_size, destination=None, _semant
         actualPackedSize = [base_tensor.shape[2], base_tensor.shape[3]]
         result_shape = [
             _ceil_div(shape[0], actualPackedSize[0]),
-            _ceil_div(shape[1], actualPackedSize[1]), actualPackedSize[0], actualPackedSize[1]
+            _ceil_div(shape[1], actualPackedSize[1]),
+            actualPackedSize[0],
+            actualPackedSize[1],
         ]
         if is_block_ptr:
-            result_tensor = tl.tensor(handle, tl.pointer_type(tl.block_type(element_ty, result_shape)))
+            result_tensor = tl.tensor(
+                handle, tl.pointer_type(tl.block_type(element_ty, result_shape))
+            )
         else:
             result_tensor = tl.tensor(handle, tl.block_type(element_ty, result_shape))
     elif all(s == 1 for s in packed_size):
         if is_block_ptr:
-            result_tensor = tl.tensor(handle, tl.pointer_type(tl.block_type(element_ty, shape)))
+            result_tensor = tl.tensor(
+                handle, tl.pointer_type(tl.block_type(element_ty, shape))
+            )
         else:
             result_tensor = tl.tensor(handle, tl.block_type(element_ty, shape))
     else:
         result_shape = [
             _ceil_div(shape[0], packed_size[0]),
-            _ceil_div(shape[1], packed_size[1]), packed_size[0], packed_size[1]
+            _ceil_div(shape[1], packed_size[1]),
+            packed_size[0],
+            packed_size[1],
         ]
         if is_block_ptr:
-            result_tensor = tl.tensor(handle, tl.pointer_type(tl.block_type(element_ty, result_shape)))
+            result_tensor = tl.tensor(
+                handle, tl.pointer_type(tl.block_type(element_ty, result_shape))
+            )
         else:
             result_tensor = tl.tensor(handle, tl.block_type(element_ty, result_shape))
     return result_tensor
@@ -145,7 +183,7 @@ def alloc(shape, dtype, storage: str, _semantic=None):
 
     ptr_type = tl.pointer_type(tl.block_type(dtype, shape))
     dtype_ir = ptr_type.to_ir(_semantic.builder)
-    storage = storage.value if hasattr(storage, 'value') else storage
+    storage = storage.value if hasattr(storage, "value") else storage
 
     handle = _semantic.builder.create_alloc(shape, dtype_ir, storage)
 
@@ -155,10 +193,16 @@ def alloc(shape, dtype, storage: str, _semantic=None):
 def alloc_copies(shape, dtype, copies, storage: str, _semantic=None):
     unwrapped_shape = [tl._unwrap_if_constexpr(dim) for dim in shape]
     unwrapped_num = tl._unwrap_if_constexpr(copies)
-    storage = storage.value if hasattr(storage, 'value') else storage
+    storage = storage.value if hasattr(storage, "value") else storage
 
-    num_val = unwrapped_num.value if isinstance(unwrapped_num, tl.constexpr) else unwrapped_num
-    base_shape = [d.value if isinstance(d, tl.constexpr) else d for d in unwrapped_shape]
+    num_val = (
+        unwrapped_num.value
+        if isinstance(unwrapped_num, tl.constexpr)
+        else unwrapped_num
+    )
+    base_shape = [
+        d.value if isinstance(d, tl.constexpr) else d for d in unwrapped_shape
+    ]
 
     full_shape = [num_val] + base_shape
 
@@ -168,32 +212,46 @@ def alloc_copies(shape, dtype, copies, storage: str, _semantic=None):
     return smt.buffered_tensor(handle, dtype, full_shape, num_val, storage, _semantic)
 
 
-def mmt4d(a_packed: tl.tensor, b_packed: tl.tensor, out_unpacked: tl.tensor, _semantic=None):
+def mmt4d(
+    a_packed: tl.tensor, b_packed: tl.tensor, out_unpacked: tl.tensor, _semantic=None
+):
     assert len(a_packed.shape) == 4, f"A must be 4D packed, got {a_packed.shape}D"
     assert len(b_packed.shape) == 4, f"B must be 4D packed, got {b_packed.shape}D"
 
-    if a_packed.shape[1] == b_packed.shape[0] and a_packed.shape[3] == b_packed.shape[2]:
+    if (
+        a_packed.shape[1] == b_packed.shape[0]
+        and a_packed.shape[3] == b_packed.shape[2]
+    ):
         mb = a_packed.shape[0]
         nb = b_packed.shape[1]
         mb_packed_sizes = a_packed.shape[2]
         nb_packed_sizes = b_packed.shape[3]
-    elif a_packed.shape[1] == b_packed.shape[1] and a_packed.shape[3] == b_packed.shape[3]:
+    elif (
+        a_packed.shape[1] == b_packed.shape[1]
+        and a_packed.shape[3] == b_packed.shape[3]
+    ):
         mb = a_packed.shape[0]
         nb = b_packed.shape[0]
         mb_packed_sizes = a_packed.shape[2]
         nb_packed_sizes = b_packed.shape[2]
     else:
-        raise ValueError(f"Unsupported packing shapes A{a_packed.shape} B{b_packed.shape}")
+        raise ValueError(
+            f"Unsupported packing shapes A{a_packed.shape} B{b_packed.shape}"
+        )
     output_shape = [mb, nb, mb_packed_sizes, nb_packed_sizes]
     ret_type = tl.block_type(a_packed.type.scalar, output_shape)
     if out_unpacked is None:
         out = _semantic.builder.create_mmt4d(a_packed.handle, b_packed.handle, None)
     else:
-        out = _semantic.builder.create_mmt4d(a_packed.handle, b_packed.handle, out_unpacked.handle)
+        out = _semantic.builder.create_mmt4d(
+            a_packed.handle, b_packed.handle, out_unpacked.handle
+        )
     return tl.tensor(out, ret_type)
 
 
-def mbarrier(flag, arrive_count, transaction_count, expect_count, _semantic=None) -> tl.tensor:
+def mbarrier(
+    flag, arrive_count, transaction_count, expect_count, _semantic=None
+) -> tl.tensor:
     from triton.language.core import _unwrap_if_constexpr
 
     flag = _unwrap_if_constexpr(flag)
@@ -212,18 +270,22 @@ def mbarrier(flag, arrive_count, transaction_count, expect_count, _semantic=None
     transaction_count_val = semantic_inst.cast(transaction_count_val, tl.int16)
     exp_val = semantic_inst.cast(exp_val, tl.int16)
 
-    bar_handle = _semantic.builder.create_mbarrier(flag_val.handle, arrive_count_val.handle,
-                                                   transaction_count_val.handle, exp_val.handle)
+    bar_handle = _semantic.builder.create_mbarrier(
+        flag_val.handle,
+        arrive_count_val.handle,
+        transaction_count_val.handle,
+        exp_val.handle,
+    )
     return tl.tensor(bar_handle, tl.int64)
 
 
 def mbarrier_copies(
-        flag=tl.constexpr(0),
-        arrive_count=tl.constexpr(0),
-        transaction_count=tl.constexpr(0),
-        expect_count=tl.constexpr(1),
-        copies=1,
-        _semantic=None,
+    flag=tl.constexpr(0),
+    arrive_count=tl.constexpr(0),
+    transaction_count=tl.constexpr(0),
+    expect_count=tl.constexpr(1),
+    copies=1,
+    _semantic=None,
 ):
     """
     Allocate multiple mbarrier copies.
@@ -255,9 +317,13 @@ def mbarrier_copies(
     expect_val = unwrap(expect_count)
     num_copies = unwrap(copies)
 
-    handle = _semantic.builder.create_mbarrier_copies(num_copies, flag_val, arrive_val, txn_val, expect_val)
+    handle = _semantic.builder.create_mbarrier_copies(
+        num_copies, flag_val, arrive_val, txn_val, expect_val
+    )
 
-    return smt.mbarrier(handle, num_copies, flag_val, arrive_val, txn_val, expect_val, _semantic)
+    return smt.mbarrier(
+        handle, num_copies, flag_val, arrive_val, txn_val, expect_val, _semantic
+    )
 
 
 def barrier_arrive(bar: tl.tensor, _semantic=None):
@@ -266,6 +332,7 @@ def barrier_arrive(bar: tl.tensor, _semantic=None):
 
 def barrier_wait(bar: tl.tensor, flag, arrive_count, _semantic=None):
     from triton.language.core import _unwrap_if_constexpr
+
     flag = _unwrap_if_constexpr(flag)
     arrive_count = _unwrap_if_constexpr(arrive_count)
 
@@ -276,7 +343,9 @@ def barrier_wait(bar: tl.tensor, flag, arrive_count, _semantic=None):
     flag_tensor = semantic_inst.cast(flag_tensor, tl.int16)
     arr_tensor = semantic_inst.cast(arr_tensor, tl.int16)
 
-    _semantic.builder.create_barrier_wait(bar.handle, flag_tensor.handle, arr_tensor.handle)
+    _semantic.builder.create_barrier_wait(
+        bar.handle, flag_tensor.handle, arr_tensor.handle
+    )
 
 
 def get_num_of_thread(_semantic=None):
@@ -284,7 +353,9 @@ def get_num_of_thread(_semantic=None):
 
 
 def global_mbarrier(id, _semantic=None) -> tl.tensor:
-    raise NotImplementedError("global_mbarrier Not supported: The syntax is not currently implemented in the lowering.")
+    raise NotImplementedError(
+        "global_mbarrier Not supported: The syntax is not currently implemented in the lowering."
+    )
     from triton.language.core import _unwrap_if_constexpr
 
     id = _unwrap_if_constexpr(id)
@@ -298,6 +369,7 @@ def global_mbarrier(id, _semantic=None) -> tl.tensor:
 
 def barrier_set_expect(bar: tl.tensor, expect_count, _semantic=None):
     from triton.language.core import _unwrap_if_constexpr
+
     expect_count = _unwrap_if_constexpr(expect_count)
 
     semantic_inst = tl_semantic.TritonSemantic(_semantic.builder)
