@@ -10,11 +10,8 @@ add_triton_library(TritonToLinalg
 
   DEPENDS
   TritonToLinalgConversionPassIncGen
-  MLIRMathExtDialectIncGen
-  MLIRMathExtOpsIncGen
 
   LINK_LIBS PUBLIC
-  MLIRMathExtDialect
   TritonTilingExtIR
   MLIRArithDialect
   MLIRDialectUtils
