@@ -12,7 +12,12 @@ import shutil
 import subprocess
 import sys
 import sysconfig
+import warnings
 from pathlib import Path
+
+# Suppress annoying setuptools warnings about C++ header directories looking like Python packages
+warnings.filterwarnings("ignore", message=".*is absent from the `packages` configuration.*")
+
 
 from setuptools import Extension, setup
 from setuptools.command.build_ext import build_ext
