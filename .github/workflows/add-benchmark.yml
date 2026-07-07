@@ -1,0 +1,41 @@
+name: Add Benchmark
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  add-benchmark:
+    runs-on: [self-hosted]
+    timeout-minutes: 120
+
+    steps:
+      - name: Run add benchmark in persistent test container
+        run: |
+          docker exec \
+            -e FRONTEND_REF="${GITHUB_REF_NAME}" \
+            triton-anchor-test \
+            bash -lc '
+              bash /artifacts/scripts/update_frontend.sh
+              bash /artifacts/scripts/rebuild_backend.sh
+              bash /artifacts/scripts/run_add_benchmark.sh
+            '
+
+      - name: Copy benchmark results
+        run: |
+          docker cp triton-anchor-test:/artifacts/t3_7_compile_add.csv ./t3_7_compile_add.csv
+          docker cp triton-anchor-test:/artifacts/t3_7_compile_add.json ./t3_7_compile_add.json
+
+      - name: Print compile time
+        run: |
+          cat t3_7_compile_add.csv
+
+      - name: Upload benchmark result
+        uses: actions/upload-artifact@v4
+        with:
+          name: add-benchmark-result
+          path: |
+            t3_7_compile_add.csv
+            t3_7_compile_add.json
