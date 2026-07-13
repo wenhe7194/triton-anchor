@@ -1,0 +1,223 @@
+name: Receive Local CI Result
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: PR head commit SHA
+        required: true
+        type: string
+      pr_number:
+        description: Pull request number
+        required: true
+        type: string
+      attempt:
+        description: Receiver continuation attempt
+        required: true
+        default: "1"
+        type: string
+      started_at:
+        description: Initial dispatch time in UTC
+        required: true
+        type: string
+      wait_seconds:
+        description: Polling window for this receiver attempt
+        required: true
+        default: "20400"
+        type: string
+
+permissions:
+  actions: write
+  contents: read
+  statuses: write
+
+concurrency:
+  group: receive-local-ci-${{ inputs.sha }}-attempt-${{ inputs.attempt }}
+  cancel-in-progress: true
+
+jobs:
+  receive-local-ci-result:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+
+    env:
+      CONTEXT: local-ci/add-benchmark
+      SHA: ${{ inputs.sha }}
+      PR_NUMBER: ${{ inputs.pr_number }}
+      ATTEMPT: ${{ inputs.attempt }}
+      STARTED_AT: ${{ inputs.started_at }}
+      WAIT_SECONDS: ${{ inputs.wait_seconds }}
+      RESULT_URL: https://gitee.com/wen-he-chy/triton-anchor/raw/ci-results/results/${{ inputs.sha }}/status.json
+      TASK_REPO: https://gitee.com/wen-he-chy/triton-anchor.git
+      MAX_ATTEMPTS: "4"
+
+    steps:
+      - name: Wait for Gitee local CI result
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import subprocess
+          import time
+          import urllib.error
+          import urllib.request
+
+          token = os.environ["GH_TOKEN"]
+          repo = os.environ["REPO"]
+          sha = os.environ["SHA"]
+          pr_number = os.environ["PR_NUMBER"]
+          attempt = int(os.environ["ATTEMPT"])
+          started_at = os.environ["STARTED_AT"]
+          wait_seconds = int(os.environ["WAIT_SECONDS"])
+          max_attempts = int(os.environ["MAX_ATTEMPTS"])
+          context = os.environ["CONTEXT"]
+          result_url = os.environ["RESULT_URL"]
+          task_repo = os.environ["TASK_REPO"]
+
+          def post_status(state, description, target_url=None):
+              payload = {
+                  "state": state,
+                  "description": description[:140],
+                  "context": context,
+              }
+              if target_url:
+                  payload["target_url"] = target_url
+
+              request = urllib.request.Request(
+                  f"https://api.github.com/repos/{repo}/statuses/{sha}",
+                  data=json.dumps(payload).encode("utf-8"),
+                  method="POST",
+                  headers={
+                      "Accept": "application/vnd.github+json",
+                      "Authorization": f"Bearer {token}",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                      "Content-Type": "application/json",
+                      "User-Agent": "github-actions-local-ci-result-receiver",
+                  },
+              )
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  print(f"GitHub status {state}: {response.status}")
+
+          def current_task_sha():
+              completed = subprocess.run(
+                  [
+                      "git",
+                      "ls-remote",
+                      task_repo,
+                      f"refs/heads/ci/pr-{pr_number}",
+                  ],
+                  check=False,
+                  capture_output=True,
+                  text=True,
+                  timeout=60,
+              )
+              if completed.returncode != 0:
+                  print(f"could not read current PR task ref: {completed.stderr[:300]}")
+                  return None
+              line = completed.stdout.strip()
+              return line.split()[0] if line else None
+
+          def dispatch_next_attempt():
+              next_attempt = attempt + 1
+              payload = {
+                  "ref": "main",
+                  "inputs": {
+                      "sha": sha,
+                      "pr_number": pr_number,
+                      "attempt": str(next_attempt),
+                      "started_at": started_at,
+                      "wait_seconds": str(wait_seconds),
+                  },
+              }
+              request = urllib.request.Request(
+                  f"https://api.github.com/repos/{repo}/actions/workflows/receive-local-ci-result.yml/dispatches",
+                  data=json.dumps(payload).encode("utf-8"),
+                  method="POST",
+                  headers={
+                      "Accept": "application/vnd.github+json",
+                      "Authorization": f"Bearer {token}",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                      "Content-Type": "application/json",
+                      "User-Agent": "github-actions-local-ci-result-receiver",
+                  },
+              )
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  if response.status != 204:
+                      raise RuntimeError(
+                          f"unexpected workflow dispatch status: {response.status}"
+                      )
+              print(f"receiver handoff accepted: attempt {next_attempt}/{max_attempts}")
+
+          post_status(
+              "pending",
+              f"waiting for local add benchmark (receiver {attempt}/{max_attempts})",
+          )
+
+          # Leave ten minutes for handoff and final status publication.
+          deadline = time.time() + wait_seconds
+
+          while time.time() < deadline:
+              try:
+                  task_sha = current_task_sha()
+                  if task_sha and task_sha != sha:
+                      post_status("error", "superseded by a newer PR commit")
+                      print(f"receiver stopped: ci/pr-{pr_number} now points to {task_sha}")
+                      raise SystemExit(0)
+
+                  cache_busted_url = f"{result_url}?timestamp={int(time.time())}"
+                  request = urllib.request.Request(
+                      cache_busted_url,
+                      headers={
+                          "Cache-Control": "no-cache",
+                          "User-Agent": "github-actions-local-ci-result-receiver",
+                      },
+                  )
+                  with urllib.request.urlopen(request, timeout=30) as response:
+                      result = json.loads(
+                          response.read().decode("utf-8-sig", errors="replace")
+                      )
+
+                  if result.get("sha") != sha:
+                      print(f"ignore result for {result.get('sha')}; waiting for {sha}")
+                  elif result.get("state") in {"success", "failure", "error"}:
+                      state = result["state"]
+                      description = result.get("description", "local CI finished")
+                      target_url = result.get(
+                          "target_url",
+                          f"https://gitee.com/wen-he-chy/triton-anchor/tree/ci-results/results/{sha}",
+                      )
+                      post_status(state, description, target_url)
+                      print(f"local CI result: {sha} {state}")
+                      raise SystemExit(0 if state == "success" else 1)
+                  else:
+                      print(f"result is not final for {sha}: {result.get('state')}")
+
+              except urllib.error.HTTPError as error:
+                  if error.code == 404:
+                      print(f"result not ready: {sha}")
+                  else:
+                      print(error.read().decode("utf-8", errors="replace")[:500])
+              except Exception as error:
+                  print(f"waiting error: {error!r}")
+
+              time.sleep(60)
+
+          if attempt < max_attempts:
+              try:
+                  dispatch_next_attempt()
+                  post_status(
+                      "pending",
+                      f"local CI still running; continued in receiver {attempt + 1}/{max_attempts}",
+                  )
+                  raise SystemExit(0)
+              except Exception as error:
+                  print(f"receiver handoff failed: {error!r}")
+                  post_status("error", "failed to continue local CI result receiver")
+                  raise SystemExit(1)
+
+          post_status("error", "local CI result not received after 4 receiver attempts")
+          raise SystemExit(1)
+          PY
