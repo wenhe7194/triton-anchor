@@ -1,0 +1,92 @@
+name: Dispatch Local CI via Gitee
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  actions: write
+  contents: read
+  statuses: write
+
+concurrency:
+  group: dispatch-local-ci-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  dispatch-local-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      CONTEXT: local-ci/add-benchmark
+
+    steps:
+      - name: Resolve PR metadata
+        id: meta
+        run: |
+          echo "sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          echo "pr=${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+          echo "started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.meta.outputs.sha }}
+          fetch-depth: 0
+
+      - name: Push PR head to Gitee
+        env:
+          GITEE_USERNAME: ${{ secrets.GITEE_USERNAME }}
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          PR_NUMBER: ${{ steps.meta.outputs.pr }}
+        run: |
+          if [ -z "$GITEE_USERNAME" ] || [ -z "$GITEE_TOKEN" ]; then
+            echo "GITEE_USERNAME or GITEE_TOKEN is empty"
+            exit 1
+          fi
+
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git remote add gitee "https://${GITEE_USERNAME}:${GITEE_TOKEN}@gitee.com/wen-he-chy/triton-anchor.git"
+          git push --force gitee HEAD:refs/heads/ci/pr-${PR_NUMBER}
+
+      - name: Mark local CI pending
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.meta.outputs.sha }}
+          PR_NUMBER: ${{ steps.meta.outputs.pr }}
+        run: |
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${SHA}" \
+            -f state=pending \
+            -f context="$CONTEXT" \
+            -f description="local add benchmark queued on Gitee" \
+            -f target_url="https://gitee.com/wen-he-chy/triton-anchor/tree/ci/pr-${PR_NUMBER}"
+
+      - name: Start result receiver
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.meta.outputs.sha }}
+          PR_NUMBER: ${{ steps.meta.outputs.pr }}
+          STARTED_AT: ${{ steps.meta.outputs.started_at }}
+        run: |
+          gh workflow run receive-local-ci-result.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main \
+            -f sha="$SHA" \
+            -f pr_number="$PR_NUMBER" \
+            -f attempt="1" \
+            -f started_at="$STARTED_AT" \
+            -f wait_seconds="20400"
+
+      - name: Mark dispatch failure
+        if: ${{ failure() && steps.meta.outputs.sha != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.meta.outputs.sha }}
+        run: |
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${SHA}" \
+            -f state=error \
+            -f context="$CONTEXT" \
+            -f description="failed to dispatch local CI task"
